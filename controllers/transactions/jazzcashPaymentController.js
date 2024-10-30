@@ -1,24 +1,22 @@
-const config = require('../config/jazzCashConfig')
-const generateSecureHash = require('../utils/generateSecureHash')
-const axios = require('axios')
+import axios from 'axios'
+import generateSecureHash from './../../utils/generateSecureHash.js'
+import keys from './../../config/keys.js'
 
 // Card Transaction: Page Redirection
 export const initiateCardPayment = (req, res) => {
     const params = {
         pp_Amount: req.body.amount * 100, // Multiply by 100 as per JazzCash requirement
-        pp_MerchantID: config.merchantId,
-        pp_Password: config.password,
+        pp_MerchantID: keys.merchantId,
+        pp_Password: keys.password,
         pp_TxnCurrency: 'PKR',
-        pp_ReturnURL: config.returnUrl,
+        pp_ReturnURL: keys.returnUrl,
         pp_TxnRefNo: `T${Date.now()}`,
         pp_TxnDateTime: new Date().toISOString(),
     }
-    params.pp_SecureHash = generateSecureHash(params, config.integritySalt)
+    params.pp_SecureHash = generateSecureHash(params, keys.integritySalt)
 
     // Redirect user to JazzCash payment page
-    const formUrl = `${config.postUrl}?${new URLSearchParams(
-        params
-    ).toString()}`
+    const formUrl = `${keys.postUrl}?${new URLSearchParams(params).toString()}`
     res.redirect(formUrl)
 }
 
@@ -26,16 +24,16 @@ export const initiateCardPayment = (req, res) => {
 export const initiateWalletPayment = async (req, res) => {
     const params = {
         pp_Amount: req.body.amount * 100,
-        pp_MerchantID: config.merchantId,
-        pp_Password: config.password,
+        pp_MerchantID: keys.merchantId,
+        pp_Password: keys.password,
         pp_TxnCurrency: 'PKR',
         pp_TxnRefNo: `W${Date.now()}`,
         pp_TxnDateTime: new Date().toISOString(),
     }
-    params.pp_SecureHash = generateSecureHash(params, config.integritySalt)
+    params.pp_SecureHash = generateSecureHash(params, keys.integritySalt)
 
     try {
-        const response = await axios.post(config.walletApiUrl, params)
+        const response = await axios.post(keys.walletApiUrl, params)
         if (response.data.pp_ResponseCode === '000') {
             res.json({
                 success: true,
@@ -60,7 +58,7 @@ export const handleJazzCashResponse = (req, res) => {
     const responseHash = req.body.pp_SecureHash
     const calculatedHash = generateSecureHash(
         responseParams,
-        config.integritySalt
+        keys.integritySalt
     )
 
     if (responseHash === calculatedHash) {
