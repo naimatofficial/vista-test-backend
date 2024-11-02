@@ -43,7 +43,6 @@ export const createSendToken = catchAsync(async (user, statusCode, res) => {
     user.password = undefined
     user.verified = undefined
     user.phoneNumber = undefined
-    user.role = undefined
 
     // Store refresh token in an HTTP-only cookie
     res.cookie('jwt', accessToken, cookieOptions)
