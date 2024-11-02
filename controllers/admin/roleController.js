@@ -13,6 +13,7 @@ import catchAsync from '../../utils/catchAsync.js'
 
 const allowedModules = [
     'user-management',
+    'vendor-management',
     'employee-management',
     'system-settings',
     'product-management',

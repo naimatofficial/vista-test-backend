@@ -17,9 +17,6 @@ import {
     restrictTo,
     selectModelByRole,
 } from '../../middleware/authMiddleware.js'
-// import { validateSchema } from '../middleware/validationMiddleware.js'
-// import EmployeeValidationSchema from './../validations/EmployeeValidator.js'
-// import { loginLimiter } from '../utils/helpers.js'
 
 const router = express.Router()
 

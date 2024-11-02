@@ -8,19 +8,17 @@ import { restrictTo } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-// Route to calculate the seller wallet (GET)
 router.get(
     '/calculate',
-    //   protect,
-    //   restrictTo("vendor", "admin"),
+    protect,
+    restrictTo('vendor-management'),
     calculateSellerWallet
 )
 
-// Route to get a specific seller wallet by seller ID (GET)
 router.get(
     '/:sellerId',
     protect,
-    restrictTo('vendor', 'admin'),
+    restrictTo('vendor-management'),
     getSellerWalletById
 )
 

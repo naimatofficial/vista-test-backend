@@ -1,41 +1,26 @@
-import express from 'express';
+import express from 'express'
 import {
     createTransaction,
     deleteTransaction,
     getTransactionById,
     getTransactions,
     updateTransaction,
-} from '../../controllers/transactions/transactionController.js';
-import { validateSchema } from '../../middleware/validationMiddleware.js';
+} from '../../controllers/transactions/transactionController.js'
+import { validateSchema } from '../../middleware/validationMiddleware.js'
 import transactionValidationSchema from '../../validations/admin/transactions/transactionValidator.js'
-const router = express.Router();
+import { protect, restrictTo } from '../../middleware/authMiddleware.js'
 
-// Define the routes for transactions
+const router = express.Router()
+
 router
     .route('/')
-    // POST /transactions - Create a new transaction
-    .post(
-        validateSchema(transactionValidationSchema),
-        createTransaction
-    )
-    // GET /transactions - Get all transactions
-    .get(
-        getTransactions
-    );
+    .post(validateSchema(transactionValidationSchema), createTransaction)
+    .get(protect, restrictTo('reports-and-analysis'), getTransactions)
 
 router
     .route('/:id')
-    // GET /transactions/:id - Get a transaction by ID
-    .get(
-        getTransactionById
-    )
-    // PUT /transactions/:id - Update a transaction by ID
-    .put(
-        updateTransaction
-    )
-    // DELETE /transactions/:id - Delete a transaction by ID
-    .delete(
-        deleteTransaction
-    );
+    .get(protect, restrictTo('reports-and-analysis'), getTransactionById)
+    .put(protect, restrictTo('reports-and-analysis'), updateTransaction)
+    .delete(protect, restrictTo('reports-and-analysis'), deleteTransaction)
 
-export default router;
+export default router

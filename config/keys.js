@@ -37,6 +37,14 @@ const keys = {
     twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
 
     otpSecretKey: process.env.OTP_SECRET_KEY,
+
+    // JazzCash Configuration Keys
+
+    jazzCashMerchantId: process.env.JAZZCASH_MERCHANT_ID,
+    jazzCashPassword: process.env.JAZZCASH_PASSWORD,
+    jazzCashIntegritySalt: process.env.JAZZCASH_INTEGRITY_SALT,
+    jazzCashReturnUrl: process.env.JAZZCASH_RETURN_URL,
+    jazzCashPostUrl: process.env.JAZZCASH_POST_URL,
 }
 
 export default keys

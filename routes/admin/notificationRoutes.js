@@ -20,7 +20,6 @@ router
     .get(protect, getAllNotifications)
     .post(
         protect,
-        restrictTo('admin'),
         validateSchema(notificationValidationSchema),
         createNotification
     )
@@ -33,8 +32,6 @@ router
     .put(protect, updateNotification)
     .delete(protect, deleteNotification)
 
-router
-    .route('/:id/increment')
-    .put(protect, restrictTo('admin'), incrementNotificationCount)
+router.route('/:id/increment').put(protect, incrementNotificationCount)
 
 export default router
