@@ -28,13 +28,11 @@ import subSubCategoryRoutes from './categories/subSubCategoryRoutes.js'
 
 import employeeRoutes from './employeeRoutes.js'
 import roleRoutes from './roleRoutes.js'
-import moduleRoutes from './moduleRoutes.js'
 
 const router = express.Router()
 
 router.use('/employees', employeeRoutes)
 router.use('/roles', roleRoutes)
-router.use('/modules', moduleRoutes)
 
 router.use('/categories', categoryRoutes)
 router.use('/sub-categories', subCategoryRoutes)

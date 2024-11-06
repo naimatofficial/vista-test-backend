@@ -1,15 +1,13 @@
-import redisClient from '../../config/redisConfig.js'
 import Customer from '../../models/users/customerModel.js'
 import catchAsync from '../../utils/catchAsync.js'
-import { getCacheKey } from '../../utils/helpers.js'
 import {
     createOne,
     deleteOne,
     getAll,
     getOne,
-    updateOne,
     updateStatus,
 } from '../../factory/handleFactory.js'
+import { deleteKeysByPattern } from '../../services/redisService.js'
 
 export const createCustomer = createOne(Customer)
 export const getCustomers = getAll(Customer)
@@ -50,16 +48,7 @@ export const updateCustomer = catchAsync(async (req, res, next) => {
         return next(new AppError(`No customer found with that ID`, 404))
     }
 
-    const cacheKeyOne = getCacheKey('Customer', req.params.id)
-
-    // delete pervious document data
-    await redisClient.del(cacheKeyOne)
-    // updated the cache with new data
-    await redisClient.setEx(cacheKeyOne, 3600, JSON.stringify(customer))
-
-    // Update cache
-    const cacheKey = getCacheKey('Customer', '', req.query)
-    await redisClient.del(cacheKey)
+    await deleteKeysByPattern('Customer')
 
     res.status(200).json({
         status: 'success',
