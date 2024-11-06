@@ -1,8 +1,6 @@
 import DealOfTheDay from '../../../models/admin/deals/dealOfTheDayModel.js'
 import {
     createOne,
-    getAll,
-    getOne,
     updateOne,
     deleteOne,
 } from '../../../factory/handleFactory.js'
@@ -17,8 +15,7 @@ export const createDealOfTheDay = createOne(DealOfTheDay)
 
 // Get all Deals of the Day with logging
 export const getAllDealsOfTheDay = catchAsync(async (req, res, next) => {
-    const cacheKey = getCacheKey('AllDealOfTheDay')
-    
+    const cacheKey = getCacheKey('DealOfTheDay')
 
     const cachedDoc = await redisClient.get(cacheKey)
 
@@ -34,7 +31,9 @@ export const getAllDealsOfTheDay = catchAsync(async (req, res, next) => {
     try {
         docs = await DealOfTheDay.find().lean()
     } catch (error) {
-        return next(new AppError('Failed to fetch deals from the database', 500))
+        return next(
+            new AppError('Failed to fetch deals from the database', 500)
+        )
     }
 
     if (!docs || docs.length === 0) {
@@ -43,20 +42,20 @@ export const getAllDealsOfTheDay = catchAsync(async (req, res, next) => {
 
     // Fetch associated products for each deal
     for (let i = 0; i < docs.length; i++) {
-        const productId = docs[i].product;
-    
-        let product;
+        const productId = docs[i].product
+
+        let product
         try {
-            product = await Product.findById(productId).lean();
+            product = await Product.findById(productId).lean()
             if (product) {
-                docs[i].products = [product]; // Make sure to use 'products'
+                docs[i].products = [product] // Make sure to use 'products'
             } else {
-                docs[i].products = []; // Use 'products' in the response
+                docs[i].products = [] // Use 'products' in the response
             }
         } catch (error) {
-            docs[i].products = [];
+            docs[i].products = []
         }
-    }    
+    }
 
     // Return the response
     res.status(200).json({
@@ -65,12 +64,6 @@ export const getAllDealsOfTheDay = catchAsync(async (req, res, next) => {
         docs,
     })
 })
-
-
-
-
-
-
 
 export const getDealOfTheDayById = catchAsync(async (req, res, next) => {
     const cacheKey = getCacheKey('DealOfTheDay', req.params.id)
@@ -116,8 +109,6 @@ export const getDealOfTheDayById = catchAsync(async (req, res, next) => {
         doc,
     })
 })
-
-
 
 // Update Deal of the Day
 export const updateDealOfTheDay = updateOne(DealOfTheDay)

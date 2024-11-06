@@ -13,6 +13,7 @@ import Category from '../../models/admin/categories/categoryModel.js'
 import ProductReview from '../../models/users/productReviewModel.js'
 import Order from '../../models/transactions/orderModel.js'
 import Employee from '../../models/admin/employeeModel.js'
+import { deleteKeysByPattern } from '../../services/redisService.js'
 
 // Create a new product
 export const createProduct = catchAsync(async (req, res, next) => {
@@ -111,13 +112,8 @@ export const createProduct = catchAsync(async (req, res, next) => {
 
     await newProduct.save()
 
-    const cacheKeyOne = getCacheKey('Product', newProduct._id)
-    await redisClient.setEx(cacheKeyOne, 3600, JSON.stringify(newProduct))
-
-    const cacheKey = getCacheKey('Product', '', req.query)
-    const cacheSortKey = getCacheKey('Product', '', { sort: 'discount' })
-    await redisClient.del(cacheKey)
-    await redisClient.del(cacheSortKey)
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Product')
 
     res.status(201).json({
         status: 'success',
@@ -303,14 +299,8 @@ export const updateProductFeaturedStatus = catchAsync(
             return next(new AppError(`No product found with that ID`, 404))
         }
 
-        const cacheKeyOne = getCacheKey('Product', productId)
-        await redisClient.del(cacheKeyOne)
-
-        const cacheKeySlug = getCacheKey('Product', doc?.slug)
-        await redisClient.del(cacheKeySlug)
-
-        const cacheKey = getCacheKey('Product', '', req.query)
-        await redisClient.del(cacheKey)
+        // delete all document caches related to this model
+        await deleteKeysByPattern('Product')
 
         res.status(200).json({
             status: 'success',
@@ -332,6 +322,9 @@ export const sellProduct = catchAsync(async (req, res) => {
     product.sell += 1
 
     await product.save()
+
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Product')
 
     res.status(200).json({
         status: 'success',

@@ -1,17 +1,14 @@
-import {
-    deleteOneWithTransaction,
-    updateStatus,
-} from '../../factory/handleFactory.js'
+import { updateStatus } from '../../factory/handleFactory.js'
 import catchAsync from '../../utils/catchAsync.js'
 import AppError from '../../utils/appError.js'
 import { getCacheKey } from '../../utils/helpers.js'
 import redisClient from '../../config/redisConfig.js'
-import Product from '../../models/admin/business/productBusinessModel.js'
 import Vendor from '../../models/sellers/vendorModel.js'
 import slugify from 'slugify'
 import ProductReview from '../../models/users/productReviewModel.js'
 import Order from '../../models/transactions/orderModel.js'
 import APIFeatures from '../../utils/apiFeatures.js'
+import { deleteKeysByPattern } from '../../services/redisService.js'
 
 export const createVendor = catchAsync(async (req, res, next) => {
     const {
@@ -51,9 +48,7 @@ export const createVendor = catchAsync(async (req, res, next) => {
         return next(new AppError(`Vendor could not be created`, 400))
     }
 
-    // Delete all documents caches related to this model
-    const cacheKey = getCacheKey('Vendor', '', req.query)
-    await redisClient.del(cacheKey)
+    await deleteKeysByPattern('Vendor')
 
     res.status(201).json({
         status: 'success',
@@ -99,9 +94,8 @@ export const registerVendor = catchAsync(async (req, res, next) => {
         return next(new AppError(`Vendor could not be created`, 400))
     }
 
-    // Delete all documents caches related to this model
-    const cacheKey = getCacheKey('Vendor', '', req.query)
-    await redisClient.del(cacheKey)
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Vendor')
 
     res.status(201).json({
         status: 'success',
@@ -134,13 +128,8 @@ export const updateVendor = catchAsync(async (req, res, next) => {
         return next(new AppError(`No vendor found with that ID`, 404))
     }
 
-    const cacheKeyOne = getCacheKey('Vendor', id)
-
-    await redisClient.del(cacheKeyOne)
-    await redisClient.setEx(cacheKeyOne, 3600, JSON.stringify(updatedVendor))
-
-    const cacheKey = getCacheKey('Vendor', '', req.query)
-    await redisClient.del(cacheKey)
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Vendor')
 
     res.status(200).json({
         status: 'success',
@@ -339,11 +328,23 @@ export const getVendorBySlug = catchAsync(async (req, res, next) => {
     })
 })
 
-// Define related models and their foreign keys
-const relatedModels = [{ model: Product, foreignKey: 'userId' }]
-
 // Delete vendor by ID
-export const deleteVendor = deleteOneWithTransaction(Vendor, relatedModels)
+export const deleteVendor = catchAsync(async (req, res, next) => {
+    const doc = await Vendor.findByIdAndDelete(req.params.id).exec()
+
+    // Handle case where the document was not found
+    if (!doc) {
+        return next(new AppError(`No vendor found with that ID`, 404))
+    }
+
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Vendor')
+
+    res.status(204).json({
+        status: 'success',
+        doc: null,
+    })
+})
 
 // Update vendor status
 export const updateVendorStatus = updateStatus(Vendor)

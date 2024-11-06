@@ -16,6 +16,7 @@ import Product from './../../../models/sellers/productModel.js'
 import Order from '../../../models/transactions/orderModel.js'
 import APIFeatures from '../../../utils/apiFeatures.js'
 import AppError from '../../../utils/appError.js'
+import { deleteKeysByPattern } from '../../../services/redisService.js'
 
 // Create a new category
 export const createCategory = catchAsync(async (req, res) => {
@@ -33,12 +34,10 @@ export const createCategory = catchAsync(async (req, res) => {
         })
     }
 
+    await deleteKeysByPattern('Category')
+
     const cacheKeyOne = getCacheKey('Category', category?._id)
     await redisClient.setEx(cacheKeyOne, 3600, JSON.stringify(category))
-
-    // delete all documents caches related to this model
-    const cacheKey = getCacheKey('Category', '', req.query)
-    await redisClient.del(cacheKey)
 
     res.status(201).json({
         status: 'success',

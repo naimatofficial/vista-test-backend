@@ -14,6 +14,7 @@ import {
     updateOne,
     updateStatus,
 } from './../../factory/handleFactory.js'
+import { deleteKeysByPattern } from '../../services/redisService.js'
 
 export const employeeLogin = catchAsync(async (req, res, next) => {
     const { email, password } = req.body
@@ -58,16 +59,8 @@ export const updateRole = catchAsync(async (req, res, next) => {
         return next(new AppError(`No Employee found with that email`, 404))
     }
 
-    const cacheKeyOne = getCacheKey('Employee', req.params.id)
-
-    // delete pervious document data
-    await redisClient.del(cacheKeyOne)
-    // updated the cache with new data
-    await redisClient.setEx(cacheKeyOne, 3600, JSON.stringify(doc))
-
-    // Update cache
-    const cacheKey = getCacheKey('Employee', '', req.query)
-    await redisClient.del(cacheKey)
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Employee')
 
     res.status(200).json({
         status: 'success',

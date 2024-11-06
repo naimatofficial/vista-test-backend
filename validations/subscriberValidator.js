@@ -11,9 +11,6 @@ const subscriberValidationSchema = Joi.object({
             'any.required': 'Email is required.',
         })
         .lowercase(),
-    subscriptionDate: Joi.date().messages({
-        'date.base': 'Subscription date must be a valid date.',
-    }),
 })
 
 export default subscriberValidationSchema

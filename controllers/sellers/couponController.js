@@ -15,6 +15,7 @@ import {
     createOne,
 } from '../../factory/handleFactory.js'
 import Vendor from '../../models/sellers/vendorModel.js'
+import { deleteKeysByPattern } from '../../services/redisService.js'
 
 // Create a new coupon
 // export const createCoupon = createOne(Coupon);
@@ -64,9 +65,8 @@ export const createCoupon = catchAsync(async (req, res, next) => {
         return next(new AppError('Coupon could not be created', 400))
     }
 
-    // Delete the previous cache for coupons
-    const cacheKey = getCacheKey('Coupon', '', req.query)
-    await redisClient.del(cacheKey)
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Coupon')
 
     // Return the created coupon
     res.status(201).json({
