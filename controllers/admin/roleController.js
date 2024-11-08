@@ -95,9 +95,8 @@ export const updateRole = catchAsync(async (req, res, next) => {
         return next(new AppError(`No role found with that ID`, 404))
     }
 
-    const cacheKeyOne = getCacheKey('Role', roleId)
-
     await deleteKeysByPattern('Role')
+    await deleteKeysByPattern('User')
 
     res.status(200).json({
         status: 'success',

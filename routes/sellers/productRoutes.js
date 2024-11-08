@@ -19,7 +19,7 @@ const router = express.Router()
 
 router
     .route('/')
-    .post(protect, restrictTo('Product Management'), createProduct)
+    .post(protect, restrictTo('product-management'), createProduct)
     .get(getAllProducts)
 
 // Static routes
@@ -28,20 +28,20 @@ router.route('/:productId/sold').get(sellProduct)
 router.put(
     '/:productId/update-product-image',
     protect,
-    restrictTo('admin', 'vendor'),
+    restrictTo('product-management'),
     updateProductImages
 )
 
 router
     .route('/:id')
     .get(getProductById)
-    .put(protect, restrictTo('Product Management'), updateProduct)
-    .delete(protect, restrictTo('admin', 'vendor', 'sub_admin'), deleteProduct)
+    .put(protect, restrictTo('product-management'), updateProduct)
+    .delete(protect, restrictTo('product-management'), deleteProduct)
 
 router.put(
     '/status/:id',
     protect,
-    restrictTo('admin', 'sub_admin'),
+    restrictTo('product-management'),
     updateProductStatus
 )
 
@@ -49,10 +49,6 @@ router.get('/slug/:slug', getProductBySlug)
 
 router
     .route('/:id/feature')
-    .put(
-        protect,
-        restrictTo('admin', 'vendor', 'sub_admin'),
-        updateProductFeaturedStatus
-    )
+    .put(protect, restrictTo('product-management'), updateProductFeaturedStatus)
 
 export default router

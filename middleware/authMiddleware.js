@@ -9,6 +9,7 @@ import Customer from '../models/users/customerModel.js'
 import Vendor from '../models/sellers/vendorModel.js'
 import Employee from '../models/admin/employeeModel.js'
 import Role from './../models/admin/roleModel.js'
+import redisClient from '../config/redisConfig.js'
 
 const models = {
     sub_admin: Employee,
@@ -31,131 +32,66 @@ export const selectModelByRole = (req, res, next) => {
 }
 
 export const protect = catchAsync(async (req, res, next) => {
-    // 1) Getting token and check of it's there
     let token
-
-    if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith('Bearer')
-    ) {
+    if (req.headers.authorization?.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1]
     }
+    if (!token) return next(new AppError('You are not logged in!', 401))
 
-    if (!token) {
-        return next(
-            new AppError(
-                'You are not logged in! Please log in to get access.',
-                401
-            )
-        )
-    }
-
-    // 2) Verification token
     const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
+    const { userId, role } = decoded
 
-    const { userId } = decoded
-
-    // 3) Check token in Redis Cache
-    const refreshToken = await getRefreshToken(userId, next)
-
-    if (!refreshToken) {
-        return next(
-            new AppError('Unfortunately, this token has already expired.', 401)
-        )
+    // Check Redis cache for the user and role data
+    const cachedUser = await redisClient.get(`cache:User:${userId}`)
+    if (cachedUser) {
+        req.user = JSON.parse(cachedUser)
+        return next()
     }
-
-    // 4) Determine the model based on the user role in the token
-    console.log(decoded)
 
     let Model
+    if (role === 'customer') Model = Customer
+    else if (role === 'vendor') Model = Vendor
+    else Model = Employee
 
-    const userRole = decoded.role.name || decoded.role
-    if (userRole === 'customer') {
-        Model = Customer
-    } else if (userRole === 'vendor') {
-        Model = Vendor
-    } else Model = Employee
-
-    if (!Model) {
-        return next(new AppError('User role not recognized.', 401))
-    }
-
-    // 5) Check if user still exists
     const currentUser = await Model.findById(userId)
+    if (!currentUser) return next(new AppError('User not found.', 401))
 
-    if (!currentUser) {
-        return next(
-            new AppError(
-                'The token belonging to this user does no longer exist.',
-                401
-            )
-        )
-    }
-
-    // 6) Check if user changed password after the token was issued (iat: issued at)
     if (currentUser.changePasswordAfter(decoded.iat)) {
-        return next(
-            new AppError(
-                'User recently changed password! Please log in again.',
-                401
-            )
-        )
+        return next(new AppError('Password changed! Please log in again.', 401))
     }
 
-    // 7) GRANT ACCESS TO PROTECTED ROUTE
     req.user = currentUser
 
+    await redisClient.setEx(
+        `cache:User:${userId}`,
+        3600,
+        JSON.stringify(currentUser)
+    )
     next()
 })
 
-// restrictTo is a Wrapper function to return the middleware function
-// export const restrictTo = (...roles) => {
+export const restrictTo = (moduleName) => async (req, res, next) => {
+    const roleName = req.user?.role?.name
+    const cachedRole = await redisClient.get(`cache:Role:${roleName}`)
 
-//     return (req, res, next) => {
-//         // roles is array: ['admin']
-
-//         if (!roles.includes(req.user?.role?.name || req.user.role)) {
-//             return next(
-//                 new AppError(
-//                     'You do not have permission to perform this action.',
-//                     403
-//                 )
-//             ) // 403: Forbiden
-//         }
-
-//         next()
-//     }
-// }
-
-export const restrictTo = (moduleName) => {
-    return async (req, res, next) => {
-        try {
-            const userRole = req.user?.role?.name
-            const role = await Role.findOne({ name: userRole })
-
-            if (!role) {
-                return next(new AppError('Role not found.', 404))
-            }
-
-            // Check if the user's role includes access to the required module
-            const hasAccess = role.modules.includes(moduleName)
-
-            console.log({ hasAccess, moduleName, role })
-
-            if (!hasAccess) {
-                return next(
-                    new AppError(
-                        'You do not have permission to access this module.',
-                        403
-                    )
-                )
-            }
-
-            next()
-        } catch (error) {
-            return next(new AppError('Error checking module access', 500))
-        }
+    let role
+    if (cachedRole) {
+        role = JSON.parse(cachedRole)
+    } else {
+        role = await Role.findOne({ name: roleName })
+        if (!role) return next(new AppError('Role not found.', 404))
+        await redisClient.setEx(
+            `cache:Role:${roleName}`,
+            3600,
+            JSON.stringify(role)
+        )
     }
+
+    const hasAccess = role.modules.includes(moduleName)
+    if (!hasAccess) {
+        return next(new AppError('Access denied to this module.', 403))
+    }
+    next()
 }
 
 export const validateSessionToken = async (req, res, next) => {

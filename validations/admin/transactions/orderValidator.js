@@ -40,18 +40,19 @@ const orderValidationSchema = Joi.object({
         'any.required': 'Total amount is required',
         'number.base': 'Total amount must be a number',
     }),
-    shpippingMethod: Joi.string().required().messages({
-        'any.required': 'Shipping Method is required',
-        'string.base': 'Shipping Method must be a string',
-    }),
     paymentMethod: Joi.string()
-        .valid('credit_card', 'paypal', 'bank_transfer', 'cash_on_delivery')
+        .valid('credit_card', 'jazzCash', 'bank_transfer', 'cash_on_delivery')
         .required()
         .messages({
             'any.required': 'Payment method is required',
             'string.base': 'Payment method must be a string',
             'any.only': 'Invalid payment method',
         }),
+    paymentStatus: Joi.string().valid('Unpaid', 'Paid').required().messages({
+        'any.required': 'Payment status is required',
+        'string.base': 'Payment status must be a string',
+        'any.only': 'Invalid payment status',
+    }),
     shippingAddress: Joi.object({
         name: Joi.string().required().messages({
             'string.base': 'Name must be a string.',

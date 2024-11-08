@@ -184,27 +184,25 @@ export const getOne = (Model, popOptions) =>
         })
     })
 
-// GET All Documents
 export const getAll = (Model, popOptions) =>
     catchAsync(async (req, res, next) => {
         const cacheKey = getCacheKey(Model.modelName, '', req.query)
 
         // Check cache first
-        const cacheddoc = await redisClient.get(cacheKey)
-
-        if (cacheddoc !== null) {
+        const cachedDoc = await redisClient.get(cacheKey)
+        if (cachedDoc) {
             return res.status(200).json({
                 status: 'success',
                 cached: true,
-                results: JSON.parse(cacheddoc).length,
-                doc: JSON.parse(cacheddoc),
+                results: JSON.parse(cachedDoc).length,
+                doc: JSON.parse(cachedDoc),
             })
         }
 
-        // EXECUTE QUERY
+        // Base query
         let query = Model.find()
 
-        // If popOptions is provided and path is an array or a string, populate the query
+        // Conditionally apply population
         if (popOptions?.path) {
             if (Array.isArray(popOptions.path)) {
                 popOptions.path.forEach((pathOption) => {
@@ -214,17 +212,27 @@ export const getAll = (Model, popOptions) =>
                 query = query.populate(popOptions)
             }
         }
-        // If not in cache, fetch from database
 
-        const features = new APIFeatures(query, req.query)
-            .filter()
-            .sort()
-            .fieldsLimit()
-            .paginate()
+        // Check if any query parameter for sorting, filtering, limiting, or pagination is present
+        const { sort, limit, page, ...filters } = req.query
+        const hasQueryOptions =
+            sort || limit || page || Object.keys(filters).length > 0
 
-        const doc = await features.query
+        // If query options are present, apply them; otherwise, return the data
+        let doc
+        if (hasQueryOptions) {
+            const features = new APIFeatures(query, req.query)
+                .filter()
+                .sort()
+                .fieldsLimit()
+                .paginate()
 
-        // Cache the result
+            doc = await features.query
+        } else {
+            doc = await Model.find().lean()
+        }
+
+        // Cache the result if not in cache
         await redisClient.setEx(cacheKey, 3600, JSON.stringify(doc))
 
         res.status(200).json({
@@ -234,6 +242,60 @@ export const getAll = (Model, popOptions) =>
             doc,
         })
     })
+
+// GET All Documents
+// export const getAll = (Model, popOptions) =>
+//     catchAsync(async (req, res, next) => {
+//         const cacheKey = getCacheKey(Model.modelName, '', req.query)
+
+//         console.log('cached data')
+//         // Check cache first
+//         const cacheddoc = await redisClient.get(cacheKey)
+
+//         if (cacheddoc !== null) {
+//             return res.status(200).json({
+//                 status: 'success',
+//                 cached: true,
+//                 results: JSON.parse(cacheddoc).length,
+//                 doc: JSON.parse(cacheddoc),
+//             })
+//         }
+
+//         // EXECUTE QUERY
+//         let query = Model.find()
+
+//         // If popOptions is provided and path is an array or a string, populate the query
+//         // if (popOptions?.path) {
+//         //     if (Array.isArray(popOptions.path)) {
+//         //         popOptions.path.forEach((pathOption) => {
+//         //             query = query.populate(pathOption)
+//         //         })
+//         //     } else {
+//         //         query = query.populate(popOptions)
+//         //     }
+//         // }
+//         // If not in cache, fetch from database
+
+//         const features = new APIFeatures(query, req.query)
+//             .filter()
+//             .sort()
+//             .fieldsLimit()
+//             .paginate()
+
+//         const doc = await features.query
+
+//         console.log('data')
+
+//         // Cache the result
+//         await redisClient.setEx(cacheKey, 3600, JSON.stringify(doc))
+
+//         res.status(200).json({
+//             status: 'success',
+//             cached: false,
+//             results: doc.length,
+//             doc,
+//         })
+//     })
 
 export const getOneBySlug = (Model, popOptions) =>
     catchAsync(async (req, res, next) => {

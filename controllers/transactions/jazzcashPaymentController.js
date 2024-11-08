@@ -85,6 +85,8 @@ export const initiateWalletPayment = catchAsync(async (req, res, next) => {
     // JazzCash credentials (replace with your actual credentials)
     const { amount, cnic, phone, description } = req.body
 
+    console.log(req.body)
+
     const txnRefNo =
         'T' +
         moment().tz('Asia/Karachi').format('YYYYMMDDHHmmss') +
@@ -94,12 +96,13 @@ export const initiateWalletPayment = catchAsync(async (req, res, next) => {
         .tz('Asia/Karachi')
         .add(24, 'hours')
         .format('YYYYMMDDHHmmss')
+
     // const orderId = parseInt(uuid.replace(/-/g, '').slice(0, 4), 16)
-    const billReference = `billRef2053`
+    const billReference = `billRef2234`
 
     // Concatenate parameters for HMAC calculation in alphabetical order
     const params = {
-        pp_Amount: amount * 100,
+        pp_Amount: Math.round(amount * 100),
         pp_MerchantID: keys.jazzCashMerchantId,
         pp_SubMerchantID: '',
         pp_Password: keys.jazzCashPassword,
@@ -125,15 +128,44 @@ export const initiateWalletPayment = catchAsync(async (req, res, next) => {
         keys.jazzCashIntegritySalt
     )
 
-    console.log(params)
-
     if (!params.pp_SecureHash) {
         return next(new AppError('Secure Hash is not defined!', 400))
     }
 
     const response = await axios.post(keys.jazzCashMobileWalletPostUrl, params)
 
-    res.send(response.data)
+    console.log(response)
+
+    if (
+        response.data.pp_ResponseMessage ===
+        'Please provide a valid value for pp_ CNIC.'
+    ) {
+        return next(new AppError('Please proivde valid CNIC.', 400))
+    } else if (
+        response.data.pp_ResponseMessage ===
+        'Please provide a valid value for pp_ phone Number.'
+    ) {
+        return next(new AppError('Please proivde valid Phone Number.', 400))
+    } else if (
+        response.data.pp_ResponseMessage ===
+        'Please provide a valid value for pp_ Description.'
+    ) {
+        return next(new AppError('Please proivde valid Description.', 400))
+    } else if (
+        response.data.pp_ResponseMessage ===
+        'Thank you for Using JazzCash, your transaction was successful.'
+    ) {
+        return res.status(201).json({
+            status: 'success',
+            message: response.data.pp_ResponseMessage,
+        })
+    } else
+        return next(
+            new AppError(
+                'Transaction failed. Verify your details and try again.',
+                400
+            )
+        )
 })
 
 // Handle JazzCash Response for Card Transactions

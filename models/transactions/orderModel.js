@@ -51,21 +51,22 @@ const orderSchema = new mongoose.Schema(
             ],
             default: 'pending',
         },
-
+        paymentStatus: {
+            type: String,
+            enum: ['Paid', 'Unpaid'],
+            default: 'Unpaid',
+        },
         totalAmount: {
             type: Number,
             required: [true, 'Please provide total amount.'],
         },
-        shippingMethod: {
-            type: String,
-        },
         paymentMethod: {
             type: String,
             enum: [
-                'credit_card',
-                'paypal',
-                'bank_transfer',
                 'cash_on_delivery',
+                'credit_card',
+                'jazzCash',
+                'bank_transfer',
             ],
             required: true,
         },
@@ -121,7 +122,7 @@ orderSchema.pre('save', async function (next) {
         })
 
         if (vendorCheck !== this.vendors.length) {
-            return next(new AppError('One or more vendors do not exist.', 400))
+            return next(new AppError('Vendor do not exist.', 400))
         }
     }
 })

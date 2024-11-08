@@ -11,9 +11,12 @@ import { protect, restrictTo } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-router.use(protect, restrictTo('employee-management'))
+// router.use()
 
-router.route('/').post(protect, createRole).get(protect, getRoles)
+router
+    .route('/')
+    .post(createRole)
+    .get(protect, restrictTo('employee-management'), getRoles)
 
 router
     .route('/:id')
