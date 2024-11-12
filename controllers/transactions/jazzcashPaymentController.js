@@ -177,7 +177,6 @@ export const handleJazzCashResponse = (req, res) => {
             pp_SecureHash,
             pp_ResponseMessage,
             pp_Amount,
-            ...responseParams
         } = req.body
 
         console.log({ response: req.body })
@@ -187,17 +186,20 @@ export const handleJazzCashResponse = (req, res) => {
         let paymentStatus
 
         if (pp_ResponseCode === '000') {
-            paymentStatus = 'Successful'
-            const totalAmount = pp_Amount / 100
-            return res.redirect(
-                `${clientUrl}/checkout/card?paymentStatus=${paymentStatus}&amount=${totalAmount}}`
-            )
+            // Set data to session storage
+            req.session.paymentData = {
+                status: 'Successful',
+                totalAmount: pp_Amount / 100,
+                message: pp_ResponseMessage,
+            }
+            // Redirect without sensitive data in the URL
+            res.redirect(`${clientUrl}/checkout/card`)
         }
-        paymentStatus = 'Failed'
-
-        return res.redirect(
-            `${clientUrl}/checkout/card?paymentStatus=${paymentStatus}`
-        )
+        req.session.paymentData = {
+            status: 'Fail',
+            message: pp_ResponseMessage,
+        }
+        return res.redirect(`${clientUrl}/checkout/card`)
     } catch (error) {
         console.error('Error handling response:', error)
         return res

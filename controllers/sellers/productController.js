@@ -45,7 +45,7 @@ export const createProduct = catchAsync(async (req, res, next) => {
         colors,
         thumbnail,
         images,
-        attributePrices = [],
+        attributes,
         videoLink,
         metaTitle,
         metaDescription,
@@ -68,11 +68,8 @@ export const createProduct = catchAsync(async (req, res, next) => {
     }
 
     // Calculate updated discount amount
-    const updatedDiscountAmount = calculateDiscountAmount(
-        price,
-        discount,
-        discountType
-    )
+    discountAmount =
+        discountType === 'percent' ? (price * discount) / 100 : discountAmount
 
     let productData = {
         name,
@@ -88,7 +85,7 @@ export const createProduct = catchAsync(async (req, res, next) => {
         price,
         discount,
         discountType,
-        discountAmount: updatedDiscountAmount,
+        discountAmount,
         taxAmount,
         taxIncluded,
         minimumOrderQty,
@@ -97,7 +94,7 @@ export const createProduct = catchAsync(async (req, res, next) => {
         thumbnail,
         images,
         colors,
-        attributes: attributePrices,
+        attributes,
         videoLink,
         userId,
         userType,
