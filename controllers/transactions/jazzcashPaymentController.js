@@ -12,7 +12,9 @@ const generateTxnRefNumber = () =>
 
 // Card Transaction: Page Redirection
 export const initiateCardPayment = catchAsync(async (req, res, next) => {
-    const { amount, description } = req.body
+    const { amount } = req.body
+
+    const description = 'Online Purchasing from Vista Mart store.'
     // Unique transaction reference
     const txnRefNo =
         'T' +
@@ -28,25 +30,24 @@ export const initiateCardPayment = catchAsync(async (req, res, next) => {
         .add(72, 'hours')
         .format('YYYYMMDDHHmmss')
 
+    const billRef = 'billRef' + Math.floor(Math.random() * 10000000)
+
     const params = {
-        pp_BillReference: 'billRef2343',
+        pp_Version: '1.1',
+        pp_BillReference: billRef,
         pp_Amount: amount * 100,
         pp_Description: description,
         pp_Language: 'EN',
         pp_MerchantID: keys.jazzCashMerchantId,
         pp_Password: keys.jazzCashPassword,
-
-        pp_Version: '1.1',
-        pp_TxnCurrency: 'PKR',
-        pp_TxnDateTime: new Date().toISOString(),
         pp_TxnRefNo: txnRefNo,
         pp_TxnType: 'MPAY',
         pp_TxnCurrency: 'PKR',
         pp_TxnDateTime: txnDateTime,
         pp_TxnExpiryDateTime: txnExpiryDateTime,
         pp_ReturnURL: keys.jazzCashReturnUrl,
-        // pp_BankId: '',
-        // pp_ProductId: '',
+        pp_BankId: '',
+        pp_ProductId: '',
         ppmpf_1: '',
         ppmpf_2: '',
         ppmpf_3: '',
@@ -63,21 +64,7 @@ export const initiateCardPayment = catchAsync(async (req, res, next) => {
         return next(new AppError('Secure Hash is not defined!', 400))
     }
 
-    console.log(params)
-
-    const redirectUrl = `${keys.jazzCashCardsPostUrl}?${new URLSearchParams(
-        params
-    ).toString()}`
-
-    console.log(redirectUrl)
-
-    // const response = await axios.post(keys.jazzCashCardsPostUrl, params)
-
-    return res.status(200).json({ redirectUrl })
-
-    // // Redirect to JazzCash with the generated URL
-
-    // return res.status(200).json({ redirectUrl })
+    res.status(200).json({ params })
 })
 
 // Wallet Transaction using API v2.0
@@ -180,30 +167,26 @@ export const handleJazzCashResponse = (req, res) => {
         } = req.body
 
         console.log({ response: req.body })
-        // const clientUrl = process.env.CLIENT_URL || 'http://localhost:80'
-        const clientUrl = 'http://localhost:80'
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:80'
 
         let paymentStatus
 
         if (pp_ResponseCode === '000') {
             // Set data to session storage
-            req.session.paymentData = {
-                status: 'Successful',
-                totalAmount: pp_Amount / 100,
-                message: pp_ResponseMessage,
-            }
+            // req.session.paymentData = {
+            //     status: 'Successful',
+            //     totalAmount: pp_Amount / 100,
+            //     message: pp_ResponseMessage,
+            // }
             // Redirect without sensitive data in the URL
-            res.redirect(`${clientUrl}/checkout/card`)
+            res.redirect(`${clientUrl}/checkout/card?paymentStatus=Successful`)
         }
-        req.session.paymentData = {
-            status: 'Fail',
-            message: pp_ResponseMessage,
-        }
-        return res.redirect(`${clientUrl}/checkout/card`)
+        // req.session.paymentData = {
+        //     status: 'Fail',
+        //     message: pp_ResponseMessage,
+        // }
+        return res.redirect(`${clientUrl}/checkout/card?paymentStatus='Fail`)
     } catch (error) {
-        console.error('Error handling response:', error)
-        return res
-            .status(500)
-            .json({ error: 'Internal server error', details: error.message })
+        return res.redirect(`${clientUrl}/checkout/card?paymentStatus='Error`)
     }
 }
