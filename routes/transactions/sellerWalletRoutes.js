@@ -11,14 +11,14 @@ const router = express.Router()
 router.get(
     '/calculate',
     protect,
-    restrictTo('vendor-management'),
+
     calculateSellerWallet
 )
 
 router.get(
     '/:sellerId',
     protect,
-    restrictTo('vendor-management'),
+
     getSellerWalletById
 )
 

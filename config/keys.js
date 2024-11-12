@@ -22,9 +22,9 @@ const keys = {
     // JWT Keys
     jwtSecret: process.env.JWT_SECRET,
     refreshSecret: process.env.JWT_REFRESH_SECRET,
-    jwtAccessTime: process.env.JWT_ACCESS_TIME,
     accessTokenExpiresIn: process.env.JWT_ACCESS_TIME,
     refreshTokenExpiresIn: process.env.JWT_REFRESH_TIME,
+
     redisUrl: process.env.REDIS_URL,
 
     // Email Configuration keys

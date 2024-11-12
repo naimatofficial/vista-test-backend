@@ -19,7 +19,7 @@ router
     .route('/')
     .post(
         protect,
-        restrictTo('promotion-management'),
+
         validateSchema(featuredDealValidationSchema),
         createFeaturedDeal
     )
@@ -28,23 +28,17 @@ router
 router
     .route('/:id')
     .get(getFeaturedDealById)
-    .delete(protect, restrictTo('promotion-management'), deleteFeaturedDeal)
-    .put(protect, restrictTo('promotion-management'), updateFeaturedDeal)
+    .delete(protect, deleteFeaturedDeal)
+    .put(protect, updateFeaturedDeal)
 
-router
-    .route('/add-product/:id')
-    .put(protect, restrictTo('promotion-management'), addProductToFeaturedDeal)
+router.route('/add-product/:id').put(protect, addProductToFeaturedDeal)
 
-router
-    .route('/status/:id')
-    .put(protect, restrictTo('promotion-management'), updateFeaturedDealStatus)
+router.route('/status/:id').put(protect, updateFeaturedDealStatus)
 
-router
-    .route('/remove-product/:id')
-    .delete(
-        protect,
-        restrictTo('promotion-management'),
-        removeProductFromFeaturedDeal
-    )
+router.route('/remove-product/:id').delete(
+    protect,
+
+    removeProductFromFeaturedDeal
+)
 
 export default router

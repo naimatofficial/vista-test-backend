@@ -9,6 +9,8 @@ import ProductReview from '../../models/users/productReviewModel.js'
 import Order from '../../models/transactions/orderModel.js'
 import APIFeatures from '../../utils/apiFeatures.js'
 import { deleteKeysByPattern } from '../../services/redisService.js'
+import Product from '../../models/sellers/productModel.js'
+import VendorBank from '../../models/sellers/vendorBankModel.js'
 
 export const createVendor = catchAsync(async (req, res, next) => {
     const {
@@ -17,17 +19,12 @@ export const createVendor = catchAsync(async (req, res, next) => {
         phoneNumber,
         email,
         password,
-        confirmPassword,
         shopName,
         address,
         vendorImage,
         logo,
         banner,
     } = req.body
-
-    if (password !== confirmPassword) {
-        return next(new AppError(`Password do not match!`, 400))
-    }
 
     const newVendor = new Vendor({
         firstName,
@@ -63,17 +60,12 @@ export const registerVendor = catchAsync(async (req, res, next) => {
         phoneNumber,
         email,
         password,
-        confirmPassword,
         shopName,
         address,
         vendorImage,
         logo,
         banner,
     } = req.body
-
-    if (password !== confirmPassword) {
-        return next(new AppError(`Password do not match.`, 400))
-    }
 
     const newVendor = new Vendor({
         firstName,
@@ -337,8 +329,14 @@ export const deleteVendor = catchAsync(async (req, res, next) => {
         return next(new AppError(`No vendor found with that ID`, 404))
     }
 
-    // delete all document caches related to this model
+    // Delete all products associated with the deleted vendor
+    await Product.deleteMany({ userId: req.params.id }).exec()
+    await VendorBank.deleteOne({ vendor: req.params.id }).exec()
+
+    // Optionally, delete all document caches related to this model
     await deleteKeysByPattern('Vendor')
+    await deleteKeysByPattern('Product')
+    await deleteKeysByPattern('Bank')
 
     res.status(204).json({
         status: 'success',

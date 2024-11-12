@@ -19,7 +19,7 @@ const router = express.Router()
 router
     .route('/')
     .post(protect, validateSchema(reviewValidationSchema), createProductReview)
-    .get(protect, restrictTo('user-management'), getAllProductReviews)
+    .get(protect, getAllProductReviews)
 
 router
     .route('/:id')
@@ -27,11 +27,6 @@ router
     .put(protect, updateProductReview)
     .delete(protect, deleteProductReview)
 
-router.put(
-    '/status/:id',
-    protect,
-    restrictTo('user-management'),
-    updateProductReviewStatus
-)
+router.put('/status/:id', protect, updateProductReviewStatus)
 
 export default router

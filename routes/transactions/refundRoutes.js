@@ -14,18 +14,15 @@ const router = express.Router()
 
 router
     .route('/')
-    .get(protect, restrictTo('order-management'), getAllRefunds)
+    .get(protect, getAllRefunds)
     .post(protect, validateSchema(refundValidationSchema), createRefund)
 
-router
-    .route('/:id')
-    .get(protect, getRefundById)
-    .delete(protect, restrictTo('order-management'), deleteRefund)
+router.route('/:id').get(protect, getRefundById).delete(protect, deleteRefund)
 
 router.put(
     '/status/:id',
     protect,
-    restrictTo('order-management'),
+
     updateRefundStatus
 )
 

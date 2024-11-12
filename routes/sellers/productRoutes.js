@@ -1,13 +1,11 @@
 import express from 'express'
 import {
     createProduct,
-    updateProductImages,
     getAllProducts,
     getProductById,
     deleteProduct,
     updateProductStatus,
     updateProductFeaturedStatus,
-    sellProduct,
     updateProduct,
     getProductBySlug,
 } from '../../controllers/sellers/productController.js'
@@ -17,42 +15,18 @@ import productValidationSchema from '../../validations/admin/sellers/productVali
 
 const router = express.Router()
 
-router
-    .route('/')
-    .post(protect, restrictTo('Product Management'), createProduct)
-    .get(getAllProducts)
-
-// Static routes
-router.route('/:productId/sold').get(sellProduct)
-
-router.put(
-    '/:productId/update-product-image',
-    protect,
-    restrictTo('admin', 'vendor'),
-    updateProductImages
-)
+router.route('/').post(protect, createProduct).get(getAllProducts)
 
 router
     .route('/:id')
     .get(getProductById)
-    .put(protect, restrictTo('Product Management'), updateProduct)
-    .delete(protect, restrictTo('admin', 'vendor', 'sub_admin'), deleteProduct)
+    .put(protect, updateProduct)
+    .delete(protect, deleteProduct)
 
-router.put(
-    '/status/:id',
-    protect,
-    restrictTo('admin', 'sub_admin'),
-    updateProductStatus
-)
+router.put('/status/:id', protect, updateProductStatus)
 
 router.get('/slug/:slug', getProductBySlug)
 
-router
-    .route('/:id/feature')
-    .put(
-        protect,
-        restrictTo('admin', 'vendor', 'sub_admin'),
-        updateProductFeaturedStatus
-    )
+router.route('/:id/feature').put(protect, updateProductFeaturedStatus)
 
 export default router

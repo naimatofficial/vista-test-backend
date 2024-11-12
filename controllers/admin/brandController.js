@@ -14,6 +14,7 @@ import {
 import Product from '../../models/sellers/productModel.js'
 import Order from '../../models/transactions/orderModel.js'
 import AppError from '../../utils/appError.js'
+import { deleteKeysByPattern } from '../../services/redisService.js'
 
 // Create a new brand
 export const createBrand = createOne(Brand)
@@ -215,15 +216,35 @@ export const updateBrand = catchAsync(async (req, res) => {
     }
 
     // Update cache
-    const cacheKey = getCacheKey('Brand', '', req.query)
-    await redisClient.del(cacheKey)
+    await deleteKeysByPattern('Brand')
 
     res.status(200).json({
         status: 'success',
         doc,
     })
 })
+
 // Delete a brand by ID
-export const deleteBrand = deleteOne(Brand)
+export const deleteBrand = catchAsync(async (req, res, next) => {
+    // Delete the brand document
+    const brand = await Brand.findByIdAndDelete(req.params.id).exec()
+
+    // Handle case where the brand was not found
+    if (!brand) {
+        return next(new AppError(`No brand found with that ID`, 404))
+    }
+
+    // Delete all products associated with this brand
+    await Product.deleteMany({ brand: req.params.id }).exec()
+
+    await deleteKeysByPattern('Brand')
+    await deleteKeysByPattern('Product')
+
+    res.status(204).json({
+        status: 'success',
+        doc: null,
+    })
+})
+
 // Update a brand's status by ID
 export const updateBrandStatus = updateStatus(Brand)

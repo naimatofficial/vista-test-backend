@@ -21,7 +21,7 @@ router
     .post(
         protect,
         validateSchema(categoryValidationSchema),
-        restrictTo('product-management'),
+
         createCategory
     )
 
@@ -30,13 +30,11 @@ router
 router
     .route('/:id')
     .get(getCategoryById)
-    .put(protect, restrictTo('product-management'), updateCategory)
-    .delete(protect, restrictTo('product-management'), deleteCategory)
+    .put(protect, updateCategory)
+    .delete(protect, deleteCategory)
 
 router.route('/slug/:slug').get(getCategoryBySlug)
 
-router
-    .route('/:id/status')
-    .put(protect, restrictTo('product-management'), updateCategoryStatus)
+router.route('/:id/status').put(protect, updateCategoryStatus)
 
 export default router

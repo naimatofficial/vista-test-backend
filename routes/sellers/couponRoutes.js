@@ -11,22 +11,14 @@ import { protect, restrictTo } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-router
-    .route('/')
-    .post(protect, restrictTo('promotion-management'), createCoupon)
-    .get(protect, restrictTo('promotion-management'), getAllCoupons)
+router.route('/').post(protect, createCoupon).get(protect, getAllCoupons)
 
 router
     .route('/:id')
     .get(getCouponById)
-    .put(protect, restrictTo('promotion-management'), updateCoupon)
-    .delete(protect, restrictTo('promotion-management'), deleteCoupon)
+    .put(protect, updateCoupon)
+    .delete(protect, deleteCoupon)
 
-router.put(
-    '/status/:id',
-    protect,
-    restrictTo('promotion-management'),
-    updateCouponStatus
-)
+router.put('/status/:id', protect, updateCouponStatus)
 
 export default router

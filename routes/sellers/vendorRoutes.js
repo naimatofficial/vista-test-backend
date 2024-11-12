@@ -32,15 +32,12 @@ router
 router.post('/login', loginVendor)
 router.post('/logout', protect, logout)
 
-router
-    .route('/')
-    .post(protect, restrictTo('vendor-management'), createVendor)
-    .get(getAllVendors)
+router.route('/').post(protect, createVendor).get(getAllVendors)
 
 router
     .route('/:id')
     .get(getVendorById)
-    .delete(protect, restrictTo('vendor-management'), deleteVendor)
+    .delete(protect, deleteVendor)
     .put(protect, updateVendor)
 
 router.put('/update-password', protect, selectModelByRole, updatePassword)
@@ -48,7 +45,7 @@ router.put('/update-password', protect, selectModelByRole, updatePassword)
 router.put(
     '/status/:id',
     protect,
-    restrictTo('vendor-management'),
+
     updateVendorStatus
 )
 

@@ -17,14 +17,12 @@ const router = express.Router()
 router
     .route('/')
     .post(protect, validateSchema(orderValidationSchema), createOrder)
-    .get(protect, restrictTo('order-management'), getAllOrders)
+    .get(protect, getAllOrders)
 
 router.get('/customer/:customerId', getOrderByCustomer)
 
 router.route('/:id').get(protect, getOrderById).delete(protect, deleteOrder)
 
-router
-    .route('/status/:id')
-    .put(protect, restrictTo('order-management'), updateOrderStatus)
+router.route('/status/:id').put(protect, updateOrderStatus)
 
 export default router

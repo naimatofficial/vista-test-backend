@@ -45,16 +45,16 @@ router
     .route('/')
     .post(
         protect,
-        restrictTo('user-management'),
+
         validateSchema(customerValidationSchema),
         createCustomer
     )
-    .get(protect, restrictTo('user-management'), getCustomers)
+    .get(protect, getCustomers)
 
 router.put(
     '/status/:id',
     protect,
-    restrictTo('user-management'),
+
     updateCustomerStatus
 )
 

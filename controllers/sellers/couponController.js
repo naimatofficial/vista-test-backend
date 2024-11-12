@@ -81,61 +81,7 @@ export const getAllCoupons = getAll(Coupon)
 
 // Get a single coupon
 
-export const getCouponById = catchAsync(async (req, res, next) => {
-    const cacheKey = getCacheKey('Coupon', req.params.id)
-
-    // Check cache first
-    const cachedDoc = await redisClient.get(cacheKey)
-
-    if (cachedDoc) {
-        return res.status(200).json({
-            status: 'success',
-            cached: true,
-            doc: JSON.parse(cachedDoc),
-        })
-    }
-
-    // If not in cache, fetch from database
-    let doc = await Coupon.findById(req.params.id).lean()
-
-    if (!doc) {
-        return next(new AppError(`No flash deal found with that ID`, 404))
-    }
-
-    const customers = await Customer.find({
-        _id: { $in: doc.customers },
-    }).lean()
-
-    // If no reviews are found, initialize with an empty array
-    if (!customers || customers.length === 0) {
-        customers = []
-    }
-    const vendors = await Vendor.find({
-        _id: { $in: doc.vendors },
-    }).lean()
-
-    // If no reviews are found, initialize with an empty array
-    if (!vendors || vendors.length === 0) {
-        vendors = []
-    }
-
-    // Add reviews (empty array if none found)
-    doc = {
-        ...doc,
-        customers,
-        vendors,
-    }
-
-    // Cache the result
-    await redisClient.setEx(cacheKey, 3600, JSON.stringify(doc))
-
-    res.status(200).json({
-        status: 'success',
-        cached: false,
-        doc,
-    })
-})
-
+export const getCouponById = getOne(Coupon)
 // Update a coupon by ID
 export const updateCoupon = updateOne(Coupon)
 

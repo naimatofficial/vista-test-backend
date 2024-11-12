@@ -138,7 +138,7 @@ export const signupCustomer = catchAsync(async (req, res, next) => {
     await otpService.saveOTP(email, null, hash)
 
     // 3. Send OTP to email for verification
-    await otpService.sendEmail(email, token)
+    await otpService.otpEmailSend(email, token)
 
     // 4. Clear previous cache for customers
     const cacheKey = getCacheKey(Customer, '', req.query)
@@ -208,10 +208,7 @@ export const loginVendor = catchAsync(async (req, res, next) => {
     }
 
     // 3) If everything is Ok, then send the response to client
-    res.status(201).json({
-        status: 'success',
-        message: 'OTP sent.',
-    })
+    createSendToken(seller, 200, res)
 })
 
 export const sellerSignup = catchAsync(async (req, res, next) => {

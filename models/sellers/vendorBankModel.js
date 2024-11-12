@@ -45,4 +45,6 @@ vendorBankSchema.pre('save', async function (next) {
 })
 
 // Export the model
-export default sellerDbConnection.model('VendorBank', vendorBankSchema)
+const VendorBank = sellerDbConnection.model('VendorBank', vendorBankSchema)
+
+export default VendorBank
