@@ -167,8 +167,7 @@ export const handleJazzCashResponse = (req, res) => {
         } = req.body
 
         console.log({ response: req.body })
-        // const clientUrl = process.env.CLIENT_URL || 'http://localhost:80'
-        const clientUrl = 'http://localhost:80'
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:80'
 
         let paymentStatus
 
@@ -188,9 +187,6 @@ export const handleJazzCashResponse = (req, res) => {
         // }
         return res.redirect(`${clientUrl}/checkout/card?paymentStatus='Fail`)
     } catch (error) {
-        console.error('Error handling response:', error)
-        return res
-            .status(500)
-            .json({ error: 'Internal server error', details: error.message })
+        return res.redirect(`${clientUrl}/checkout/card?paymentStatus='Error`)
     }
 }
