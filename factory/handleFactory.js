@@ -416,8 +416,6 @@ export const updateStatus = (Model) =>
             return next(new AppError(`No ${docName} found with that ID`, 404))
         }
 
-        const cacheKeyOne = getCacheKey(Model.modelName, req.params.id)
-
         // delete all document caches related to this model
         await deleteKeysByPattern(Model.modelName)
 

@@ -1,5 +1,5 @@
 import express from 'express'
-import { protect, restrictTo } from './../../middleware/authMiddleware.js'
+import { protect } from './../../middleware/authMiddleware.js'
 import {
     addProductToWishlist,
     removeProductFromWishlist,
@@ -7,21 +7,14 @@ import {
     getAllWishlists,
     deleteWishlist,
 } from '../../controllers/users/wishlistController.js'
-import { validateSchema } from '../../middleware/validationMiddleware.js'
-import wishlistValidationSchema from '../../validations/wishlistValidator.js'
 
 const router = express.Router()
 
 router.get('/', protect, getAllWishlists)
 
-router.post(
-    '/add',
-    protect,
-    validateSchema(wishlistValidationSchema),
-    addProductToWishlist
-)
+router.post('/add', protect, addProductToWishlist)
 
-router.delete('/products/:productId', protect, removeProductFromWishlist)
+router.put('/remove/product/:productId', protect, removeProductFromWishlist)
 
 router
     .route('/:customerId')

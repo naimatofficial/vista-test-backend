@@ -64,8 +64,8 @@ const orderSchema = new mongoose.Schema(
             type: String,
             enum: [
                 'cash_on_delivery',
-                'credit_card',
                 'jazzCash',
+                'credit_card',
                 'bank_transfer',
             ],
             required: true,

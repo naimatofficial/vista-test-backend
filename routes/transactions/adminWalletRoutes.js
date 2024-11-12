@@ -15,7 +15,7 @@ router.get('/analytics', getBusinessAnalytics)
 router.get(
     '/',
     protect,
-    restrictTo('reports-and-analysis'),
+
     calculateAdminWallet
 )
 

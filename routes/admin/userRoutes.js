@@ -32,15 +32,12 @@ router.put('/update-password', protect, selectModelByRole, updatePassword)
 
 router.put('/update-role', updateRole)
 
-router
-    .route('/')
-    .post(protect, restrictTo('admin'), createUser)
-    .get(protect, restrictTo('admin', 'vendor'), getUsers)
+router.route('/').post(protect, createUser).get(protect, getUsers)
 
 router
     .route('/:id')
     .get(getUser)
-    .delete(protect, restrictTo('admin'), deleteUser)
+    .delete(protect, deleteUser)
     .put(protect, updateUser)
 
 export default router

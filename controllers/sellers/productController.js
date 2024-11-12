@@ -7,13 +7,17 @@ import AppError from '../../utils/appError.js'
 
 import Product from '../../models/sellers/productModel.js'
 import Vendor from '../../models/sellers/vendorModel.js'
-import Wishlist from '../../models/users/wishlistModel.js'
 import Brand from '../../models/admin/brandModel.js'
 import Category from '../../models/admin/categories/categoryModel.js'
 import ProductReview from '../../models/users/productReviewModel.js'
 import Order from '../../models/transactions/orderModel.js'
 import Employee from '../../models/admin/employeeModel.js'
 import { deleteKeysByPattern } from '../../services/redisService.js'
+
+// Helper function for discount calculation
+const calculateDiscountAmount = (price, discount, type) => {
+    return type === 'percent' ? (price * discount) / 100 : discountAmount
+}
 
 // Create a new product
 export const createProduct = catchAsync(async (req, res, next) => {
@@ -63,21 +67,14 @@ export const createProduct = catchAsync(async (req, res, next) => {
         return next(new AppError('Invalid userType provided', 400))
     }
 
-    if (taxIncluded) {
-        price += taxAmount
-    }
+    // Calculate updated discount amount
+    const updatedDiscountAmount = calculateDiscountAmount(
+        price,
+        discount,
+        discountType
+    )
 
-    let updatedDiscountAmount = discountAmount
-
-    if (discountType === 'flat') {
-        // If the discount type is flat, use the given discountAmount
-        updatedDiscountAmount = discountAmount
-    } else if (discountType === 'percent') {
-        // If the discount type is percent, calculate the discount percentage
-        updatedDiscountAmount = (price * discount) / 100
-    }
-
-    const newProduct = new Product({
+    let productData = {
         name,
         description,
         category,
@@ -85,7 +82,6 @@ export const createProduct = catchAsync(async (req, res, next) => {
         subSubCategory,
         brand,
         productType,
-        digitalProductType,
         sku,
         unit,
         tags,
@@ -108,7 +104,16 @@ export const createProduct = catchAsync(async (req, res, next) => {
         metaTitle,
         metaDescription,
         slug: slugify(name, { lower: true }),
-    })
+    }
+
+    if (productType === 'digital') {
+        productData = {
+            ...productData,
+            digitalProductType,
+        }
+    }
+
+    const newProduct = new Product(productData)
 
     await newProduct.save()
 
@@ -121,36 +126,142 @@ export const createProduct = catchAsync(async (req, res, next) => {
     })
 })
 
-export const updateProductImages = catchAsync(async (req, res) => {
-    const productId = req.params.id
-    const product = await Product.findById(productId)
+// export const getAllProducts = catchAsync(async (req, res, next) => {
+//     const cacheKey = getCacheKey('Product', '', req.query)
 
-    // Handle case where the document was not found
-    if (!product) {
+//     // Check cache first
+//     const cachedDoc = await redisClient.get(cacheKey)
+//     if (cachedDoc) {
+//         return res.status(200).json({
+//             status: 'success',
+//             cached: true,
+//             results: JSON.parse(cachedDoc).length,
+//             doc: JSON.parse(cachedDoc),
+//         })
+//     }
+
+//     // Base query for products
+//     let query = Product.find()
+
+//     // Check if any query parameter for sorting, filtering, limiting, or pagination is present
+//     const { sort, limit, page, ...filters } = req.query
+//     const hasQueryOptions =
+//         sort || limit || page || Object.keys(filters).length > 0
+
+//     // Apply query options if present
+//     let products
+//     if (hasQueryOptions) {
+//         const features = new APIFeatures(query, req.query)
+//             .filter()
+//             .sort()
+//             .fieldsLimit()
+//             .paginate()
+
+//         products = await features.query.lean()
+//     } else {
+//         products = await Product.find().lean()
+//     }
+
+//     // Get unique IDs for related data
+//     const categoryIds = [
+//         ...new Set(products.map((p) => p.category).filter(Boolean)),
+//     ]
+//     const brandIds = [...new Set(products.map((p) => p.brand).filter(Boolean))]
+
+//     // Fetch related data from separate databases
+//     const [categories, brands] = await Promise.all([
+//         Category.find({ _id: { $in: categoryIds } })
+//             .select('name logo')
+//             .lean(),
+//         Brand.find({ _id: { $in: brandIds } })
+//             .select('name logo')
+//             .lean(),
+//     ])
+
+//     // Convert to maps for faster lookups
+//     const categoryMap = Object.fromEntries(
+//         categories.map((cat) => [cat._id.toString(), cat])
+//     )
+//     const brandMap = Object.fromEntries(
+//         brands.map((brand) => [brand._id.toString(), brand])
+//     )
+
+//     // Enrich products with related data
+//     const enrichedProducts = products.map((product) => ({
+//         ...product,
+//         category: categoryMap[product.category?.toString()] || null,
+//         brand: brandMap[product.brand?.toString()] || null,
+//     }))
+
+//     // Cache the result
+//     await redisClient.setEx(cacheKey, 3600, JSON.stringify(enrichedProducts))
+
+//     res.status(200).json({
+//         status: 'success',
+//         cached: false,
+//         results: enrichedProducts.length,
+//         doc: enrichedProducts,
+//     })
+// })
+
+export const getAllProducts = getAll(Product)
+
+// Update product details
+export const updateProduct = catchAsync(async (req, res, next) => {
+    const { id: productId } = req.params
+
+    if (!productId) {
+        return next(new AppError('Product ID is required', 400))
+    }
+
+    // Initialize the fields for update based on provided inputs
+    const updateFields = {}
+
+    // Populate `updateFields` only with provided fields
+    for (const key of Object.keys(req.body)) {
+        if (req.body[key] !== undefined) {
+            updateFields[key] = req.body[key]
+        }
+    }
+
+    // Conditionally calculate discount if required fields are provided
+    if (
+        updateFields.price !== undefined &&
+        updateFields.discount !== undefined &&
+        updateFields.discountType
+    ) {
+        updateFields.discountAmount =
+            updateFields.discountType === 'percent'
+                ? (updateFields.price * updateFields.discount) / 100
+                : updateFields.discountAmount
+    }
+
+    // Set slug only if `name` is provided
+    if (updateFields.name) {
+        updateFields.slug = slugify(updateFields.name, { lower: true })
+    }
+
+    // Perform update with Mongoose and handle response
+    const updatedProduct = await Product.findByIdAndUpdate(
+        productId,
+        updateFields,
+        {
+            new: true,
+            runValidators: true,
+        }
+    )
+
+    if (!updatedProduct) {
         return next(new AppError('No product found with that ID', 404))
     }
 
-    product.images = req.files ? req.files.map((file) => file.path) : []
-    await product.save()
-
-    const cacheKeyOne = getCacheKey(Product, req.params.id)
-
-    // delete pervious document data
-    await redisClient.del(cacheKeyOne)
-    // updated the cache with new data
-    await redisClient.setEx(cacheKeyOne, 3600, JSON.stringify(doc))
-
-    // Update cache
-    const cacheKey = getCacheKey(Product, '', req.query)
-    await redisClient.del(cacheKey)
+    await deleteKeysByPattern('Product')
 
     res.status(200).json({
         status: 'success',
-        doc: product,
+        doc: updatedProduct,
     })
 })
-
-export const getAllProducts = getAll(Product)
 
 export const getProductById = catchAsync(async (req, res, next) => {
     const cacheKey = getCacheKey('Product', req.params.id)
@@ -270,8 +381,6 @@ export const getProductBySlug = catchAsync(async (req, res, next) => {
     })
 })
 
-const relatedModels = [{ model: Wishlist, foreignKey: 'products' }]
-
 // Delete a Product
 export const deleteProduct = deleteOne(Product)
 
@@ -308,157 +417,3 @@ export const updateProductFeaturedStatus = catchAsync(
         })
     }
 )
-
-// Mark product as sold
-export const sellProduct = catchAsync(async (req, res) => {
-    const productId = req.params.id
-
-    const product = await Product.findById(productId)
-
-    if (!product) {
-        return next(new AppError('No product found with that ID.', 404))
-    }
-
-    product.sell += 1
-
-    await product.save()
-
-    // delete all document caches related to this model
-    await deleteKeysByPattern('Product')
-
-    res.status(200).json({
-        status: 'success',
-        doc: product,
-    })
-})
-
-// Update product details
-export const updateProduct = catchAsync(async (req, res, next) => {
-    const productId = req.params.id
-
-    const {
-        name,
-        description,
-        category,
-        subCategory,
-        subSubCategory,
-        brand,
-        productType,
-        digitalProductType,
-        sku,
-        unit,
-        tags,
-        price, // Base price or default price if no attribute price
-        discount,
-        discountType,
-        discountAmount,
-        taxAmount,
-        taxIncluded,
-        minimumOrderQty,
-        shippingCost,
-        stock,
-        isFeatured,
-        colors,
-        attributes, // Assuming attributes like 'small', 'medium', 'large'
-        size,
-        videoLink,
-        userId,
-        userType,
-    } = req.body
-
-    // Initialize discount calculation
-    let updatedDiscountAmount = discountAmount
-
-    // Calculate discount if needed
-    if (discountType === 'flat') {
-        updatedDiscountAmount = discountAmount
-    } else if (discountType === 'percent') {
-        updatedDiscountAmount = (price * discount) / 100
-    }
-
-    // Fetch prices based on selected attributes (e.g., size or color)
-    let finalPrice = price // Start with the base price
-
-    if (attributes && attributes.length > 0) {
-        const attributePricePromises = attributes.map(async (attributeId) => {
-            // Fetch attribute from the Attribute model (from another DB)
-            const attribute = await adminDbConnection
-                .model('Attribute')
-                .findById(attributeId)
-            if (!attribute) {
-                return next(new AppError('Invalid attribute selected', 400))
-            }
-            // Assume attribute has a `priceModifier` field to adjust the price
-
-            return attribute.priceModifier || 0
-        })
-
-        const attributePriceModifiers = await Promise.all(
-            attributePricePromises
-        )
-
-        // Sum all the attribute-based price modifiers to get the final price
-        finalPrice =
-            price +
-            attributePriceModifiers.reduce(
-                (total, modifier) => total + modifier,
-                0
-            )
-    }
-
-    // Update the product with new values and calculated final price
-    const updatedProduct = await Product.findByIdAndUpdate(
-        productId,
-        {
-            name,
-            description,
-            category,
-            subCategory,
-            subSubCategory,
-            brand,
-            productType,
-            digitalProductType,
-            sku,
-            unit,
-            tags,
-            price: finalPrice, // Set the updated final price
-            discount,
-            discountType,
-            discountAmount: updatedDiscountAmount,
-            taxAmount,
-            taxIncluded,
-            minimumOrderQty,
-            shippingCost,
-            stock,
-            isFeatured,
-            colors: [colors],
-            attributes: [attributes],
-            size,
-            videoLink,
-            userId,
-            userType,
-            slug: slugify(name, { lower: true }),
-        },
-        { new: true }
-    )
-
-    // Update cache for the product
-    const cacheKeyId = getCacheKey('Product', updatedProduct?._id)
-    const cacheKeySlug = getCacheKey('Product', updatedProduct?.slug)
-
-    await redisClient.del(cacheKeyId)
-    await redisClient.del(cacheKeySlug)
-
-    // Set updated product in cache
-    await redisClient.setEx(cacheKeyId, 3600, JSON.stringify(updatedProduct))
-    await redisClient.setEx(cacheKeySlug, 3600, JSON.stringify(updatedProduct))
-
-    // Invalidate product list cache
-    const cacheKeyModel = getCacheKey('Product', '', req.query)
-    await redisClient.del(cacheKeyModel)
-
-    res.status(200).json({
-        status: 'success',
-        doc: updatedProduct,
-    })
-})

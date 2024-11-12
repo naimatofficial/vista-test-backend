@@ -16,7 +16,7 @@ router
     .route('/')
     .post(
         protect,
-        restrictTo('product-management'),
+
         validateSchema(colorValidationSchema),
         createColor
     )
@@ -25,7 +25,7 @@ router
 router
     .route('/:id')
     .get(getColorById)
-    .put(protect, restrictTo('product-management'), updateColor)
-    .delete(protect, restrictTo('product-management'), deleteColor)
+    .put(protect, updateColor)
+    .delete(protect, deleteColor)
 
 export default router

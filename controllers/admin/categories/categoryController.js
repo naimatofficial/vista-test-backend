@@ -45,22 +45,6 @@ export const createCategory = catchAsync(async (req, res) => {
     })
 })
 
-// export const getCategories = getAll(Category, {
-//     path: [
-//         'productCount',
-//         {
-//             path: 'subCategories',
-//             select: '_id name slug',
-//         },
-//         {
-//             path: 'subSubCategories',
-//             select: '_id name slug',
-//         },
-//     ],
-// })
-
-// Get a single category by ID
-
 export const getCategories = catchAsync(async (req, res, next) => {
     const cacheKey = getCacheKey('Category', '', req.query)
 
@@ -188,17 +172,31 @@ export const getCategoryById = catchAsync(async (req, res, next) => {
 
 // Update a category by ID
 export const updateCategory = updateOne(Category)
-// Delete a category by ID
-// Define related models and their foreign keys
-const relatedModels = [
-    { model: SubCategory, foreignKey: 'mainCategory' },
-    { model: SubSubCategory, foreignKey: 'mainCategory' },
-    // { model: Product, foreignKey: 'category' },
-]
 
-// Delete a category by ID
-// export const deleteCategory = deleteOneWithTransaction(Category, relatedModels);
-export const deleteCategory = deleteOne(Category)
+// Delete Category and associated Products
+export const deleteCategory = catchAsync(async (req, res, next) => {
+    const category = await Category.findByIdAndDelete(req.params.id).exec()
+
+    // Handle case where the category was not found
+    if (!category) {
+        return next(new AppError(`No category found with that ID`, 404))
+    }
+
+    // Delete all data associated with this category
+    await Product.deleteMany({ category: req.params.id }).exec()
+    await SubCategory.deleteMany({ mainCategory: req.params.id }).exec()
+    await SubSubCategory.deleteMany({ mainCategory: req.params.id }).exec()
+
+    await deleteKeysByPattern('Product')
+    await deleteKeysByPattern('Category')
+    await deleteKeysByPattern('SubCategory')
+    await deleteKeysByPattern('SubSubCategory')
+
+    res.status(204).json({
+        status: 'success',
+        doc: null,
+    })
+})
 
 // Get category by slug
 export const getCategoryBySlug = catchAsync(async (req, res, next) => {

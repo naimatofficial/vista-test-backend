@@ -13,20 +13,15 @@ import { protect, restrictTo } from './../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-router
-    .route('/')
-    .post(protect, restrictTo('product-management'), createBrand)
-    .get(getBrands)
+router.route('/').post(protect, createBrand).get(getBrands)
 
 router
     .route('/:id')
     .get(getBrandById)
-    .put(protect, restrictTo('product-management'), updateBrand)
-    .delete(protect, restrictTo('product-management'), deleteBrand)
+    .put(protect, updateBrand)
+    .delete(protect, deleteBrand)
 
-router
-    .route('/status/:id')
-    .put(protect, restrictTo('product-management'), updateBrandStatus)
+router.route('/status/:id').put(protect, updateBrandStatus)
 
 router.get('/slug/:slug', getBrandBySlug)
 

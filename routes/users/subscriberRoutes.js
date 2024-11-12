@@ -10,11 +10,11 @@ import { protect, restrictTo } from './../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-router.get('/', protect, restrictTo('admin'), getSubscribers)
+router.get('/', protect, getSubscribers)
 router
     .route('/')
     .post(validateSchema(subscriberValidationSchema), addSubscriber)
 
-router.route('/:id').delete(protect, restrictTo('admin'), deleteSubscriber)
+router.route('/:id').delete(protect, deleteSubscriber)
 
 export default router

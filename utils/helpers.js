@@ -1,13 +1,22 @@
-import rateLimit from "express-rate-limit";
-import AppError from "./appError.js";
-import mongoose from "mongoose";
+import rateLimit from 'express-rate-limit'
+import AppError from './appError.js'
+import keys from '../config/keys.js'
+import nodemailer from 'nodemailer'
 
 // Helper function to get the cache key
-export const getCacheKey = (modelName, id = "", query = {}) => {
-  const baseKey = `cache:${modelName}`;
-  if (id) return `${baseKey}:${id}`;
-  return `${baseKey}:query:${JSON.stringify(query)}`;
-};
+export const getCacheKey = (modelName, id = '', query = {}) => {
+    const baseKey = `cache:${modelName}`
+    if (id) return `${baseKey}:${id}`
+    return `${baseKey}:query:${JSON.stringify(query)}`
+}
+
+export const emailTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: keys.emailAddress,
+        pass: keys.emailPassKey,
+    },
+})
 
 export const checkReferenceId = async (Model, foreignKey, next) => {
     const referenceKey = await Model.findById(foreignKey)
@@ -21,30 +30,30 @@ export const checkReferenceId = async (Model, foreignKey, next) => {
 }
 
 export const loginLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 50, // limit each IP to 5 requests per windowMs
-  handler: (req, res, next, options) => {
-    res.status(options.statusCode).json({
-      status: "fail",
-      message: `Too many login attempts from this IP, please try again after ${Math.ceil(
-        options.windowMs / 1000 / 60
-      )} minutes.`,
-    });
-  },
-  standardHeaders: true, // Send rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    max: 50, // limit each IP to 5 requests per windowMs
+    handler: (req, res, next, options) => {
+        res.status(options.statusCode).json({
+            status: 'fail',
+            message: `Too many login attempts from this IP, please try again after ${Math.ceil(
+                options.windowMs / 1000 / 60
+            )} minutes.`,
+        })
+    },
+    standardHeaders: true, // Send rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+})
 
 export const createPasswordResetMessage = (
-  email,
-  ipAddress,
-  timestamp,
-  resetUrl
+    email,
+    ipAddress,
+    timestamp,
+    resetUrl
 ) => {
-  const brandLogoURL =
-    "https://i.pinimg.com/originals/c8/51/e1/c851e1918e356d0bfdcd090fb2c2332c.jpg";
+    const brandLogoURL =
+        'https://i.pinimg.com/originals/c8/51/e1/c851e1918e356d0bfdcd090fb2c2332c.jpg'
 
-  return `
+    return `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; padding: 10px; background-color: #e7e7e7">
             <div style="padding: 20px; width: 50%; margin: 0 auto; background-color: #fff">
                 <div style="text-align: left; margin-bottom: 20px; border-bottom: 1px solid #444">
@@ -76,18 +85,18 @@ export const createPasswordResetMessage = (
                     </div>
             </div>
         </div>
-    `;
-};
+    `
+}
 
 export const createPasswordResetConfirmationMessage = (
-  email,
-  ipAddress,
-  timestamp
+    email,
+    ipAddress,
+    timestamp
 ) => {
-  const brandLogoURL =
-    "https://i.pinimg.com/originals/c8/51/e1/c851e1918e356d0bfdcd090fb2c2332c.jpg";
+    const brandLogoURL =
+        'https://i.pinimg.com/originals/c8/51/e1/c851e1918e356d0bfdcd090fb2c2332c.jpg'
 
-  return `
+    return `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; padding: 10px">
             <div style="text-align: left; margin-bottom: 20px; border-bottom: 1px solid #444">
                 <img src="${brandLogoURL}" alt="Brand Logo" style="max-width: 150px;">
@@ -111,5 +120,5 @@ export const createPasswordResetConfirmationMessage = (
                 </table>
             </div>
         </div>
-    `;
-};
+    `
+}

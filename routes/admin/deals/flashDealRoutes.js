@@ -23,7 +23,7 @@ router
     .route('/')
     .post(
         protect,
-        restrictTo('promotion-management'),
+
         validateSchema(flashDealValidationSchema),
         createFlashDeal
     )
@@ -32,27 +32,19 @@ router
 router
     .route('/:id')
     .get(getFlashDealById)
-    .put(protect, restrictTo('promotion-management'), updateFlashDeal)
-    .delete(protect, restrictTo('promotion-management'), deleteFlashDeal)
+    .put(protect, updateFlashDeal)
+    .delete(protect, deleteFlashDeal)
 
-router
-    .route('/add-product/:id')
-    .put(protect, restrictTo('promotion-management'), addProductToFlashDeal)
+router.route('/add-product/:id').put(protect, addProductToFlashDeal)
 
-router
-    .route('/remove-product/:id')
-    .put(
-        protect,
-        restrictTo('promotion-management'),
-        removeProductFromFlashDeal
-    )
+router.route('/remove-product/:id').put(
+    protect,
 
-router
-    .route('/status/:id')
-    .put(protect, restrictTo('promotion-management'), updateFlashDealStatus)
+    removeProductFromFlashDeal
+)
 
-router
-    .route('/publish/:id')
-    .put(protect, restrictTo('promotion-management'), updatePublishFlashDeal)
+router.route('/status/:id').put(protect, updateFlashDealStatus)
+
+router.route('/publish/:id').put(protect, updatePublishFlashDeal)
 
 export default router

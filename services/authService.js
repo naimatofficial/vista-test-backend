@@ -13,7 +13,7 @@ async function generateRefreshToken(userId, role) {
 
 function generateAccessToken(userId, role) {
     return jwt.sign({ userId, role }, keys.jwtSecret, {
-        expiresIn: keys.jwtAccessTime,
+        expiresIn: keys.accessTokenExpiresIn,
     })
 }
 

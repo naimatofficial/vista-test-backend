@@ -1,5 +1,3 @@
-import redisClient from '../../config/redisConfig.js'
-
 import AppError from '../../utils/appError.js'
 import catchAsync from '../../utils/catchAsync.js'
 import {
@@ -10,9 +8,9 @@ import {
     updateStatus,
 } from './../../factory/handleFactory.js'
 
-import { getCacheKey } from '../../utils/helpers.js'
 import ProductReview from './../../models/users/productReviewModel.js'
 import Product from '../../models/sellers/productModel.js'
+import { deleteKeysByPattern } from '../../services/redisService.js'
 
 export const createProductReview = catchAsync(async (req, res, next) => {
     const { productId, review, rating } = req.body
@@ -50,15 +48,8 @@ export const createProductReview = catchAsync(async (req, res, next) => {
 
     await product.save()
 
-    // delete all productReviewuments caches related to this model
-    const reviewCacheKey = getCacheKey('ProductReview', '', req.query)
-    await redisClient.del(reviewCacheKey)
-
-    const productCacheKey = getCacheKey('Product', product.slug)
-    await redisClient.del(productCacheKey)
-
-    const productsCacheKey = getCacheKey('Product', '', req.query)
-    await redisClient.del(productsCacheKey)
+    await deleteKeysByPattern('Product')
+    await deleteKeysByPattern('ProductReview')
 
     res.status(201).json({
         status: 'success',

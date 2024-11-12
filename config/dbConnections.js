@@ -24,7 +24,6 @@ mongoose.set('strictQuery', false) // Disable strict mode for queries (optional)
 // Helper function to create a connection with optimized settings
 function createConnection(uri) {
     return mongoose.createConnection(uri, {
-        useUnifiedTopology: true, // Improved connection handling
         maxPoolSize: 10, // Adjust based on server load
         connectTimeoutMS: 10000, // Connection timeout (10 seconds)
         socketTimeoutMS: 45000, // Socket timeout (45 seconds)

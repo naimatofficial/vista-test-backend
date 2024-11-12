@@ -13,10 +13,7 @@ const router = express.Router()
 
 // router.use()
 
-router
-    .route('/')
-    .post(createRole)
-    .get(protect, restrictTo('employee-management'), getRoles)
+router.route('/').post(createRole).get(protect, getRoles)
 
 router
     .route('/:id')

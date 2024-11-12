@@ -15,12 +15,12 @@ const router = express.Router()
 router
     .route('/')
     .post(validateSchema(transactionValidationSchema), createTransaction)
-    .get(protect, restrictTo('reports-and-analysis'), getTransactions)
+    .get(protect, getTransactions)
 
 router
     .route('/:id')
-    .get(protect, restrictTo('reports-and-analysis'), getTransactionById)
-    .put(protect, restrictTo('reports-and-analysis'), updateTransaction)
-    .delete(protect, restrictTo('reports-and-analysis'), deleteTransaction)
+    .get(protect, getTransactionById)
+    .put(protect, updateTransaction)
+    .delete(protect, deleteTransaction)
 
 export default router

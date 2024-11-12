@@ -8,11 +8,30 @@ import {
     updateStatus,
 } from '../../factory/handleFactory.js'
 import { deleteKeysByPattern } from '../../services/redisService.js'
+import ProductReview from '../../models/users/productReviewModel.js'
 
 export const createCustomer = createOne(Customer)
 export const getCustomers = getAll(Customer)
 export const getCustomer = getOne(Customer)
-export const deleteCustomer = deleteOne(Customer)
+
+export const deleteCustomer = catchAsync(async (req, res, next) => {
+    const customer = await Customer.findByIdAndDelete(req.params.id).exec()
+
+    // Handle case where the customer was not found
+    if (!customer) {
+        return next(new AppError(`No customer found with that ID`, 404))
+    }
+
+    // Delete all products associated with this customer
+    // await ProductReview.deleteMany({ customer: req.params.id }).exec()
+
+    await deleteKeysByPattern('Customer')
+
+    res.status(204).json({
+        status: 'success',
+        doc: null,
+    })
+})
 
 export const updateCustomer = catchAsync(async (req, res, next) => {
     const {

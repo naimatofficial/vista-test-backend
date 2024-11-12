@@ -27,19 +27,19 @@ router.put('/update-password', protect, selectModelByRole, updatePassword)
 
 router
     .route('/')
-    .post(protect, restrictTo('employee-management'), createEmployee)
-    .get(protect, restrictTo('employee-management'), getEmployees)
+    .post(protect,  createEmployee)
+    .get(protect,  getEmployees)
 
 router
     .route('/:id')
     .get(protect, getEmployeeById)
     .put(protect, updateEmployee)
-    .delete(protect, restrictTo('employee-management'), deleteEmployee)
+    .delete(protect,  deleteEmployee)
 
 router.put(
     '/status/:id',
     protect,
-    restrictTo('employee-management'),
+    
     updateEmployeeStatus
 )
 

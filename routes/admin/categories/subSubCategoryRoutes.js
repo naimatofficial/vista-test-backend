@@ -19,7 +19,7 @@ router
     .route('/')
     .post(
         protect,
-        restrictTo('product-management'),
+
         validateSchema(subSubCategoryValidationSchema),
         createSubSubCategory
     )
@@ -28,8 +28,8 @@ router
 router
     .route('/:id')
     .get(getSubSubCategoryById)
-    .put(protect, restrictTo('product-management'), updateSubSubCategoryById)
-    .delete(protect, restrictTo('product-management'), deleteSubSubCategoryById)
+    .put(protect, updateSubSubCategoryById)
+    .delete(protect, deleteSubSubCategoryById)
 
 router.route('/slug/:slug').get(getSubSubCategoryBySlug)
 

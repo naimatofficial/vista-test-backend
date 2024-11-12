@@ -176,23 +176,28 @@ export const handleJazzCashResponse = (req, res) => {
             pp_ResponseCode,
             pp_SecureHash,
             pp_ResponseMessage,
+            pp_Amount,
             ...responseParams
         } = req.body
 
         console.log({ response: req.body })
+        // const clientUrl = process.env.CLIENT_URL || 'http://localhost:80'
+        const clientUrl = 'http://localhost:80'
+
+        let paymentStatus
 
         if (pp_ResponseCode === '000') {
-            return res.status(200).json({
-                message:
-                    pp_ResponseMessage || 'Your transaction was successful.',
-                data: responseParams,
-            })
-        } else {
-            return res.status(400).json({
-                message: pp_ResponseMessage || 'Your transaction was failed',
-                data: responseParams,
-            })
+            paymentStatus = 'Successful'
+            const totalAmount = pp_Amount / 100
+            return res.redirect(
+                `${clientUrl}/checkout/card?paymentStatus=${paymentStatus}&amount=${totalAmount}}`
+            )
         }
+        paymentStatus = 'Failed'
+
+        return res.redirect(
+            `${clientUrl}/checkout/card?paymentStatus=${paymentStatus}`
+        )
     } catch (error) {
         console.error('Error handling response:', error)
         return res
