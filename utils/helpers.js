@@ -10,6 +10,17 @@ export const getCacheKey = (modelName, id = '', query = {}) => {
     return `${baseKey}:query:${JSON.stringify(query)}`
 }
 
+// Set up Nodemailer transporter with SMTP configuration
+// export const emailTransporter = nodemailer.createTransport({
+//     host: 'p3plzcpnl505003.prod.phx3.secureserver.net', // SMTP host
+//     port: 465, // Port
+//     secure: true, // Use SSL/TLS (usually true for port 465)
+//     auth: {
+//         user: 'support@vistamart.biz', // SMTP username
+//         pass: 'u&Z_mnGlEN~o', // Replace with the actual password for the email account
+//     },
+// })
+
 export const emailTransporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {

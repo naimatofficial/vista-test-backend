@@ -1,7 +1,8 @@
 import keys from '../config/keys.js'
+import catchAsync from '../utils/catchAsync.js'
 import { emailTransporter } from '../utils/helpers.js'
 
-const sendEmail = async (options) => {
+const sendEmail = catchAsync(async (options) => {
     // Define the email options
     const mailOptions = {
         from: keys.emailAddress,
@@ -18,6 +19,6 @@ const sendEmail = async (options) => {
             console.log('Email sent: ' + info.response)
         }
     })
-}
+})
 
 export default sendEmail

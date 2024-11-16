@@ -185,8 +185,8 @@ export const handleJazzCashResponse = (req, res) => {
         //     status: 'Fail',
         //     message: pp_ResponseMessage,
         // }
-        return res.redirect(`${clientUrl}/checkout/card?paymentStatus='Fail`)
+        return res.redirect(`${clientUrl}/checkout/card?paymentStatus=Fail`)
     } catch (error) {
-        return res.redirect(`${clientUrl}/checkout/card?paymentStatus='Error`)
+        return res.redirect(`${clientUrl}/checkout/card?paymentStatus=Error`)
     }
 }
