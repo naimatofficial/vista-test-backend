@@ -72,6 +72,9 @@ const vendorSchema = new mongoose.Schema(
             type: String,
             unique: true,
         },
+        passwordChangedAt: Date,
+        passwordResetToken: String,
+        passwordResetExpires: Date,
     },
     {
         toJSON: { virtuals: true },
