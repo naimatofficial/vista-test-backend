@@ -28,8 +28,12 @@ import subSubCategoryRoutes from './categories/subSubCategoryRoutes.js'
 
 import employeeRoutes from './employeeRoutes.js'
 import roleRoutes from './roleRoutes.js'
+import { getAdminBusinessAnalytics } from '../../controllers/analytics/bussinessAnalytics.js'
+import { protect } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.get('/business-analytics', protect, getAdminBusinessAnalytics)
 
 router.use('/employees', employeeRoutes)
 router.use('/roles', roleRoutes)

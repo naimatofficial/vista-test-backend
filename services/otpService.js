@@ -10,7 +10,8 @@ import AppError from '../utils/appError.js'
 import sendEmail from './emailService.js'
 
 // keysure Twilio
-const client = twilio(keys.twilioAccountSID, keys.twilioAuthToken)
+// const client = twilio(keys.twilioAccountSID, keys.twilioAuthToken)
+const client = []
 
 // Generate OTP and its hash
 export const generateOTP = () => {

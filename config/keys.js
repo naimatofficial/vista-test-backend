@@ -4,6 +4,7 @@ dotenv.config()
 
 const keys = {
     port: process.env.PORT || 3000,
+    nodeEnv: process.env.NODE_ENV,
 
     // Redis db
     redisURL: process.env.REDIS_URL,

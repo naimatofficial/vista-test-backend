@@ -14,10 +14,7 @@ import { restrictTo } from '../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-router
-    .route('/')
-    .post(protect, validateSchema(orderValidationSchema), createOrder)
-    .get(protect, getAllOrders)
+router.route('/').post(protect, createOrder).get(protect, getAllOrders)
 
 router.get('/customer/:customerId', getOrderByCustomer)
 

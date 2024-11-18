@@ -5,11 +5,6 @@ import moment from 'moment-timezone'
 import catchAsync from '../../utils/catchAsync.js'
 import AppError from '../../utils/appError.js'
 
-const generateTxnRefNumber = () =>
-    `T${new Date().toISOString().slice(0, 19).replace(/[-T:]/g, '')}${
-        Math.floor(Math.random() * 91) + 10
-    }`
-
 // Card Transaction: Page Redirection
 export const initiateCardPayment = catchAsync(async (req, res, next) => {
     const { amount } = req.body
@@ -72,8 +67,6 @@ export const initiateWalletPayment = catchAsync(async (req, res, next) => {
     // JazzCash credentials (replace with your actual credentials)
     const { amount, cnic, phone, description } = req.body
 
-    console.log(req.body)
-
     const txnRefNo =
         'T' +
         moment().tz('Asia/Karachi').format('YYYYMMDDHHmmss') +
@@ -85,7 +78,7 @@ export const initiateWalletPayment = catchAsync(async (req, res, next) => {
         .format('YYYYMMDDHHmmss')
 
     // const orderId = parseInt(uuid.replace(/-/g, '').slice(0, 4), 16)
-    const billReference = `billRef2234`
+    const billRef = 'billRef' + Math.floor(Math.random() * 10000000)
 
     // Concatenate parameters for HMAC calculation in alphabetical order
     const params = {
@@ -94,7 +87,7 @@ export const initiateWalletPayment = catchAsync(async (req, res, next) => {
         pp_SubMerchantID: '',
         pp_Password: keys.jazzCashPassword,
         pp_TxnRefNo: txnRefNo,
-        pp_BillReference: billReference,
+        pp_BillReference: billRef,
         pp_CNIC: cnic,
         pp_Description: description,
         pp_Language: 'EN',
@@ -120,8 +113,6 @@ export const initiateWalletPayment = catchAsync(async (req, res, next) => {
     }
 
     const response = await axios.post(keys.jazzCashMobileWalletPostUrl, params)
-
-    console.log(response)
 
     if (
         response.data.pp_ResponseMessage ===
@@ -156,7 +147,6 @@ export const initiateWalletPayment = catchAsync(async (req, res, next) => {
 })
 
 // Handle JazzCash Response for Card Transactions
-// Enhanced JazzCash Response Handler for Card Transactions
 export const handleJazzCashResponse = (req, res) => {
     try {
         const {
@@ -166,25 +156,12 @@ export const handleJazzCashResponse = (req, res) => {
             pp_Amount,
         } = req.body
 
-        console.log({ response: req.body })
         const clientUrl = process.env.CLIENT_URL || 'http://localhost:80'
 
-        let paymentStatus
-
         if (pp_ResponseCode === '000') {
-            // Set data to session storage
-            // req.session.paymentData = {
-            //     status: 'Successful',
-            //     totalAmount: pp_Amount / 100,
-            //     message: pp_ResponseMessage,
-            // }
-            // Redirect without sensitive data in the URL
             res.redirect(`${clientUrl}/checkout/card?paymentStatus=Successful`)
         }
-        // req.session.paymentData = {
-        //     status: 'Fail',
-        //     message: pp_ResponseMessage,
-        // }
+
         return res.redirect(`${clientUrl}/checkout/card?paymentStatus=Fail`)
     } catch (error) {
         return res.redirect(`${clientUrl}/checkout/card?paymentStatus=Error`)

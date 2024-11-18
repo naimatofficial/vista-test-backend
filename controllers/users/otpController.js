@@ -8,8 +8,6 @@ export const sendEmailOTP = catchAsync(async (req, res, next) => {
     const { email } = req.body
     const { token, hash } = otpService.generateOTP()
 
-    console.log({ token, hash })
-
     await otpService.otpEmailSend(email, token)
     await otpService.saveOTP(email, null, hash)
 
