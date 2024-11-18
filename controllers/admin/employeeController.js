@@ -2,10 +2,6 @@ import Employee from '../../models/admin/employeeModel.js'
 import AppError from '../../utils/appError.js'
 import catchAsync from '../../utils/catchAsync.js'
 import { createSendToken } from '../authController.js'
-
-import redisClient from '../../config/redisConfig.js'
-import { getCacheKey } from '../../utils/helpers.js'
-
 import {
     createOne,
     deleteOne,
@@ -18,8 +14,6 @@ import { deleteKeysByPattern } from '../../services/redisService.js'
 
 export const employeeLogin = catchAsync(async (req, res, next) => {
     const { email, password } = req.body
-
-    console.log(req.body)
 
     // 1) Check if email and password exists
     if (!email || !password) {
@@ -44,26 +38,25 @@ export const deleteEmployee = deleteOne(Employee)
 export const updateEmployee = updateOne(Employee)
 export const updateEmployeeStatus = updateStatus(Employee)
 
-export const updateRole = catchAsync(async (req, res, next) => {
-    const { employeeId, role } = req.body
-    const doc = await Employee.findByIdAndUpdate(
-        employeeId,
-        { role },
-        {
-            new: true,
-            runValidators: true,
-        }
+export const updateEmployeePassword = catchAsync(async (req, res, next) => {
+    const user = await Employee.findById(req.user._id).select('+password')
+
+    // 2) Check the Posted current password is correct
+    const correct = await user.correctPassword(
+        req.body.passwordCurrent,
+        user.password
     )
 
-    if (!doc) {
-        return next(new AppError(`No Employee found with that email`, 404))
+    if (!correct) {
+        return next(new AppError('Your current password is wrong.', 401))
     }
 
-    // delete all document caches related to this model
+    // 3) If so, update the password
+    user.password = req.body.passwordNew
+    await user.save()
+
     await deleteKeysByPattern('Employee')
 
-    res.status(200).json({
-        status: 'success',
-        doc,
-    })
+    // 4) send JWT
+    createSendToken(user, 200, res)
 })

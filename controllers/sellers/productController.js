@@ -14,11 +14,6 @@ import Order from '../../models/transactions/orderModel.js'
 import Employee from '../../models/admin/employeeModel.js'
 import { deleteKeysByPattern } from '../../services/redisService.js'
 
-// Helper function for discount calculation
-const calculateDiscountAmount = (price, discount, type) => {
-    return type === 'percent' ? (price * discount) / 100 : discountAmount
-}
-
 // Create a new product
 export const createProduct = catchAsync(async (req, res, next) => {
     let {

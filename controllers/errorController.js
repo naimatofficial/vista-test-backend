@@ -1,6 +1,5 @@
+import keys from '../config/keys.js'
 import AppError from './../utils/appError.js'
-
-const NODE_ENV = process.env.NODE_ENV || 'production'
 
 const handleCastErrorDB = (err) => {
     const message = `Invalid ${err.path}: ${err.value}.`
@@ -57,9 +56,9 @@ export default (err, req, res, next) => {
     err.statusCode = err.statusCode || 500
     err.status = err.status || 'error'
 
-    if (NODE_ENV === 'development') {
+    if (keys.nodeEnv === 'development') {
         sendErrorDev(err, res)
-    } else if (NODE_ENV === 'production') {
+    } else if (keys.nodeEnv === 'production') {
         let error
 
         if (err.name === 'CastError') {

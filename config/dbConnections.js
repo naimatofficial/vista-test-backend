@@ -21,16 +21,15 @@ import keys from './keys.js'
 
 mongoose.set('strictQuery', false) // Disable strict mode for queries (optional)
 
-// Helper function to create a connection with optimized settings
 function createConnection(uri) {
     return mongoose.createConnection(uri, {
         maxPoolSize: 10, // Adjust based on server load
+        minPoolSize: 2, // Helps keep connections alive
         connectTimeoutMS: 10000, // Connection timeout (10 seconds)
         socketTimeoutMS: 45000, // Socket timeout (45 seconds)
-        serverSelectionTimeoutMS: 5000, // Server selection timeout (5 seconds)
+        serverSelectionTimeoutMS: 10000, // Server selection timeout (5 seconds)
     })
 }
-
 // UserDB connection
 export const userDbConnection = createConnection(keys.userDbURI)
 userDbConnection.on('connected', () => console.log('UserDB connected'))

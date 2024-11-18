@@ -108,7 +108,5 @@ export const sendOrderEmail = catchAsync(async (customer, orderId) => {
         `,
     }
 
-    console.log(mailOptions)
-
     await sendEmail(mailOptions)
 })

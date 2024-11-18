@@ -134,9 +134,6 @@ export const createOne = (Model) =>
             await redisClient.del(modelCache)
         }
 
-        const cacheKeyOne = getCacheKey(Model.modelName, doc?._id)
-        await redisClient.setEx(cacheKeyOne, 3600, JSON.stringify(doc))
-
         // delete all document caches related to this model
         await deleteKeysByPattern(Model.modelName)
 
