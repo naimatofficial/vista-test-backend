@@ -127,7 +127,7 @@ const orderSchema = new mongoose.Schema(
 
 orderSchema.pre('save', async function (next) {
     await checkReferenceId(Customer, this.customer, next)
-    await checkReferenceId(this.vendor, Vendor, next)
+    await checkReferenceId(Vendor, this.vendor, next)
 
     // Check if products exist and validate them
     if (this.products && this.products.length > 0) {
