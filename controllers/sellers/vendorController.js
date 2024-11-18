@@ -1,16 +1,20 @@
-import { updateStatus } from '../../factory/handleFactory.js'
-import catchAsync from '../../utils/catchAsync.js'
+import slugify from 'slugify'
+
+import Vendor from '../../models/sellers/vendorModel.js'
+import Product from '../../models/sellers/productModel.js'
+import Order from '../../models/transactions/orderModel.js'
+import VendorBank from '../../models/sellers/vendorBankModel.js'
+import ProductReview from '../../models/users/productReviewModel.js'
 import AppError from '../../utils/appError.js'
+
+import catchAsync from '../../utils/catchAsync.js'
 import { getCacheKey } from '../../utils/helpers.js'
 import redisClient from '../../config/redisConfig.js'
-import Vendor from '../../models/sellers/vendorModel.js'
-import slugify from 'slugify'
-import ProductReview from '../../models/users/productReviewModel.js'
-import Order from '../../models/transactions/orderModel.js'
 import APIFeatures from '../../utils/apiFeatures.js'
+
 import { deleteKeysByPattern } from '../../services/redisService.js'
-import Product from '../../models/sellers/productModel.js'
-import VendorBank from '../../models/sellers/vendorBankModel.js'
+import { updateStatus } from '../../factory/handleFactory.js'
+import { createSendToken } from '../authController.js'
 
 export const createVendor = catchAsync(async (req, res, next) => {
     const {
@@ -346,3 +350,28 @@ export const deleteVendor = catchAsync(async (req, res, next) => {
 
 // Update vendor status
 export const updateVendorStatus = updateStatus(Vendor)
+
+export const updateVendorPassword = catchAsync(async (req, res, next) => {
+    console.log(req.user)
+    const user = await Vendor.findById(req.user._id).select('+password')
+
+    console.log(user)
+    // 2) Check the Posted current password is correct
+    const correct = await user.correctPassword(
+        req.body.passwordCurrent,
+        user.password
+    )
+
+    if (!correct) {
+        return next(new AppError('Your current password is wrong.', 401))
+    }
+
+    // 3) If so, update the password
+    user.password = req.body.passwordNew
+    await user.save()
+
+    await deleteKeysByPattern('Vendor')
+
+    // 4) send JWT
+    createSendToken(user, 200, res)
+})
