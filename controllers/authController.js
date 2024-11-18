@@ -314,6 +314,8 @@ export const resetPassword = catchAsync(async (req, res, next) => {
     user.password = passwordNew
     user.passwordResetToken = undefined
     user.passwordResetExpires = undefined
+    user.passwordChangedAt = Date.now()
+
     await user.save()
 
     await sendEmail({

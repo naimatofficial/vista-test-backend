@@ -53,6 +53,8 @@ export const updateEmployeePassword = catchAsync(async (req, res, next) => {
 
     // 3) If so, update the password
     user.password = req.body.passwordNew
+    user.passwordChangedAt = Date.now()
+
     await user.save()
 
     await deleteKeysByPattern('Employee')
