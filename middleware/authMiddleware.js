@@ -57,6 +57,8 @@ export const protect = catchAsync(async (req, res, next) => {
         return next()
     }
 
+    console.log({ decoded })
+
     let Model
     if (role === 'customer') Model = Customer
     else if (role === 'vendor') Model = Vendor
@@ -70,6 +72,8 @@ export const protect = catchAsync(async (req, res, next) => {
     }
 
     req.user = currentUser
+
+    console.log(req.user)
 
     await redisClient.setEx(
         `cache:User:${userId}`,
