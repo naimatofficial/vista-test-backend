@@ -12,6 +12,7 @@ import AppError from '../../../utils/appError.js'
 import catchAsync from '../../../utils/catchAsync.js'
 import FlashDeal from '../../../models/admin/deals/flashDealModel.js'
 import { updateProductStatus } from './../../sellers/productController.js'
+import APIFeatures from '../../../utils/apiFeatures.js'
 
 const checkExpiration = (flashDeal) => {
     const currentDate = new Date()
@@ -50,7 +51,45 @@ export const createFlashDeal = catchAsync(async (req, res) => {
 })
 
 // Get Flash Deals with Caching
-export const getFlashDeals = getAll(FlashDeal)
+export const getFlashDeals = catchAsync(async (req, res, next) => {
+    const cacheKey = getCacheKey('FlashDeal', '', req.query)
+    const cachedDoc = await redisClient.get(cacheKey)
+
+    if (cachedDoc) {
+        return res.status(200).json({
+            status: 'success',
+            cached: true,
+            results: JSON.parse(cachedDoc).length,
+            doc: JSON.parse(cachedDoc),
+        })
+    }
+
+    let query = FlashDeal.find().lean()
+
+    const features = new APIFeatures(query, req.query)
+        .filter()
+        .sort()
+        .fieldsLimit()
+        .paginate()
+
+    const deals = await features.query
+
+    // Batch fetching all products, vendors, and customers
+    const productIds = deals.flatMap((deal) => deal.products.map((p) => p))
+
+    const products = await Product.find({ _id: { $in: productIds } }).lean()
+
+    const flashDeals = { ...deals, products }
+
+    await redisClient.setEx(cacheKey, 3600, JSON.stringify(flashDeals))
+
+    res.status(200).json({
+        status: 'success',
+        cached: false,
+        results: flashDeals.length,
+        doc: flashDeals,
+    })
+})
 // Get Flash Deal by ID
 
 export const getFlashDealById = catchAsync(async (req, res, next) => {

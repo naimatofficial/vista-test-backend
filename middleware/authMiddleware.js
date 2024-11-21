@@ -68,7 +68,12 @@ export const protect = catchAsync(async (req, res, next) => {
     if (!currentUser) return next(new AppError('User not found.', 401))
 
     if (currentUser.changePasswordAfter(decoded.iat)) {
-        return next(new AppError('Password changed! Please log in again.', 401))
+        return next(
+            new AppError(
+                'Your password has been changed. Please log in again to continue.',
+                401
+            )
+        )
     }
 
     req.user = currentUser
