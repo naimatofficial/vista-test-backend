@@ -199,6 +199,7 @@ export const getAll = (Model, popOptions) =>
         // Base query
         let query = Model.find()
 
+
         // Conditionally apply population
         if (popOptions?.path) {
             if (Array.isArray(popOptions.path)) {

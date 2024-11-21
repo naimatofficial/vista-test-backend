@@ -51,7 +51,8 @@ export const getBrands = catchAsync(async (req, res, next) => {
         brands.map(async (brand) => {
             // Step 1: Fetch all products for the brand
             const products = await Product.find({
-                brand: brand._id, // Match products by the brand ID
+                brand: brand._id,
+                status: 'approved',
             }).lean()
 
             const totalProducts = products?.length || 0
@@ -114,7 +115,8 @@ export const getBrandById = catchAsync(async (req, res, next) => {
 
     // Step 1: Fetch total products for the brand
     const products = await Product.find({
-        brand: brandId, // Match products with the given brand ID
+        brand: brandId,
+        status: 'approved',
     }).lean()
 
     const totalProducts = products?.length || 0
@@ -170,7 +172,8 @@ export const getBrandBySlug = catchAsync(async (req, res, next) => {
 
     // Step 1: Fetch total products for the brand
     const products = await Product.find({
-        brand: brandId, // Match products with the given brand ID
+        brand: brandId,
+        status: 'approved',
     }).lean()
 
     const totalProducts = products?.length || 0

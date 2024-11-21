@@ -41,7 +41,8 @@ export const createProductReview = catchAsync(async (req, res, next) => {
     const product = await Product.findById(productId)
 
     const numOfReviews = product.numOfReviews + 1
-    const productRating = (product.rating + rating) / numOfReviews
+    const productRating =
+        Math.round(((product.rating + rating) / numOfReviews) * 10) / 10
 
     product.numOfReviews = numOfReviews
     product.rating = productRating
