@@ -89,6 +89,24 @@ export const createOrder = catchAsync(async (req, res, next) => {
         return next(new AppError(`Order could not be created`, 400))
     }
 
+    // If the order status is 'delivered', increment the product sell count
+    for (const item of doc?.products) {
+        const { product, quantity } = item
+
+        // Update sold count by the quantity sold and reduce the stock by the same quantity
+        await Product.findByIdAndUpdate(
+            product,
+            {
+                $inc: {
+                    stock: -quantity, // Decrement the stock by the quantity sold
+                },
+            },
+            { new: true }
+        )
+
+        await deleteKeysByPattern('Product')
+    }
+
     await deleteKeysByPattern('Order')
 
     // Send order confirmation email
@@ -427,16 +445,14 @@ export const getCustomerOrderById = catchAsync(async (req, res, next) => {
     )
 
     // Map the vendors array to their corresponding vendor documents
-    const orderVendors = order.vendors.map(
-        (vendorId) => vendorsMap[vendorId] || null
-    )
+    const vendor = await Vendor.findById(vendorId).lean()
 
     // Add full details of customer, products, and vendors to the order
     const customerOrders = {
         ...order, // Spread the existing order fields
         customer, // Add the customer object
+        vendor, // Add the full vendor objects
         products: orderProducts, // Add the full product objects
-        vendors: orderVendors, // Add the full vendor objects
     }
 
     res.status(200).json({
@@ -476,7 +492,7 @@ export const updateOrderStatus = catchAsync(async (req, res, next) => {
             {
                 $inc: {
                     sold: quantity, // Increment the sold count by the quantity sold
-                    stock: -quantity, // Decrement the stock by the quantity sold
+                    // stock: -quantity, // Decrement the stock by the quantity sold
                 },
             },
             { new: true }
