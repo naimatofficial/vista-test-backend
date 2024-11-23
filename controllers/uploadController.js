@@ -66,7 +66,7 @@ export const getProductImageUrl = catchAsync(async (req, res, next) => {
 })
 
 export const deleteImage = catchAsync(async (req, res, next) => {
-    const { key } = req.params // Key of the image in S3 bucket
+    const { key } = req.body // Key of the image in S3 bucket
 
     if (!key) {
         return next(new AppError('Image key is required', 400))
@@ -83,7 +83,7 @@ export const deleteImage = catchAsync(async (req, res, next) => {
 })
 
 export const updateImage = catchAsync(async (req, res, next) => {
-    const { key } = req.params // Key of the image to update
+    const { key } = req.body // Key of the image to update
     const fileType = req.query.fileType || 'jpeg'
 
     // Validate file type

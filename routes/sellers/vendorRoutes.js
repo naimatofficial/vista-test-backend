@@ -9,6 +9,7 @@ import {
     updateVendor,
     getVendorBySlug,
     updateVendorPassword,
+    updateShopStatus,
 } from '../../controllers/sellers/vendorController.js'
 import { validateSchema } from '../../middleware/validationMiddleware.js'
 import vendorValidationSchema from '../../validations/admin/sellers/vendorValidator.js'
@@ -41,6 +42,8 @@ router.put(
 
     updateVendorStatus
 )
+
+router.put('/shop-status/:id', protect, updateShopStatus)
 
 router.get('/slug/:slug', getVendorBySlug)
 

@@ -11,6 +11,8 @@ const sendEmail = catchAsync(async (options) => {
         html: options.html,
     }
 
+    console.log(mailOptions)
+
     // Actually send the email
     await emailTransporter.sendMail(mailOptions, function (error, info) {
         if (error) {
