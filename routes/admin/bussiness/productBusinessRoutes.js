@@ -1,29 +1,27 @@
-import express from "express";
+import express from 'express'
 import {
-  createProductBusiness,
-  deleteProductBusinessById,
-  getAllProductBusiness,
-  updateProductBusinessById,
-} from "../../../controllers/admin/business/productBusinessController.js";
+    createProductBusiness,
+    deleteProductBusinessById,
+    getAllProductBusiness,
+    updateProductBusinessById,
+} from '../../../controllers/admin/business/productBusinessController.js'
 
-import { validateSchema } from "../../../middleware/validationMiddleware.js";
-import productBusinessValidationSchema from "./../../../validations/admin/business/productBusinessValidator.js";
-import { getProductBusinessById } from "./../../../controllers/admin/business/productBusinessController.js";
-import { protect, restrictTo } from "../../../middleware/authMiddleware.js";
+import { validateSchema } from '../../../middleware/validationMiddleware.js'
+import productBusinessValidationSchema from './../../../validations/admin/business/productBusinessValidator.js'
+import { getProductBusinessById } from './../../../controllers/admin/business/productBusinessController.js'
+import { protect, restrictTo } from '../../../middleware/authMiddleware.js'
 
-const router = express.Router();
-
-router
-  .route("/")
-  .post(protect, restrictTo
-    ("admin"),validateSchema(productBusinessValidationSchema), createProductBusiness)
-
-  .get(getAllProductBusiness);
+const router = express.Router()
 
 router
-  .route("/:id")
-  .get(getProductBusinessById)
-  .put(protect, restrictTo("admin"),updateProductBusinessById)
-  .delete(protect, restrictTo("admin"),deleteProductBusinessById);
+    .route('/')
+    .post(protect, createProductBusiness)
+    .get(getAllProductBusiness)
 
-export default router;
+router
+    .route('/:id')
+    .get(getProductBusinessById)
+    .put(protect, updateProductBusinessById)
+    .delete(protect, deleteProductBusinessById)
+
+export default router

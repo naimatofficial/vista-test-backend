@@ -36,12 +36,7 @@ router
     .delete(protect, deleteVendor)
     .put(protect, updateVendor)
 
-router.put(
-    '/status/:id',
-    protect,
-
-    updateVendorStatus
-)
+router.put('/status/:id', protect, updateVendorStatus)
 
 router.put('/shop-status/:id', protect, updateShopStatus)
 

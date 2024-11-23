@@ -16,18 +16,13 @@ const router = express.Router()
 
 router
     .route('/')
-    .post(
-        protect,
-        restrictTo('system-settings'),
-        validateSchema(businessGeneralValidationSchema),
-        createBusinessGeneral
-    )
+    .post(protect, createBusinessGeneral)
     .get(getAllBusinessGeneral)
 
 router
     .route('/:id')
     .get(getBusinessGeneralById)
-    .put(protect, restrictTo('system-settings'), updateBusinessGeneralById)
-    .delete(protect, restrictTo('system-settings'), deleteBusinessGeneralById)
+    .put(protect, updateBusinessGeneralById)
+    .delete(protect, deleteBusinessGeneralById)
 
 export default router

@@ -28,6 +28,10 @@ import subSubCategoryRoutes from './categories/subSubCategoryRoutes.js'
 
 import employeeRoutes from './employeeRoutes.js'
 import roleRoutes from './roleRoutes.js'
+
+import pageRoutes from '../admin/pagesAndMedia/pageRoutes.js'
+import socialMediaRoutes from '../admin/pagesAndMedia/socialMediaRoutes.js'
+
 import { getAdminBusinessAnalytics } from '../../controllers/analytics/bussinessAnalytics.js'
 import { protect } from '../../middleware/authMiddleware.js'
 
@@ -55,15 +59,20 @@ router.use('/featured-deals', featureDeal)
 
 //Business
 router.use('/businessgeneral', businessGeneralRoutes)
-router.use('/categorywise', categoryWiseRoutes)
-router.use('/customerBusiness', customerBusinessRoutes)
-router.use('/deliveryman', deliveryManRoutes)
-router.use('/deliveryRestriction', deliveryRestrictionRoutes)
 router.use('/inHouseShop', inHouseShopRotes)
 router.use('/orderBusiness', orderBusinessRoutes)
 router.use('/orderWise', orderWiseRoutes)
 router.use('/productBusiness', productBusinessRoutes)
 router.use('/sellerBusiness', sellerBusinessRoutes)
 router.use('/shippinpMethod', shippinpMethodRoutes)
+
+// Pages & Media
+router.use('/pages', pageRoutes)
+router.use('/social-media', socialMediaRoutes)
+
+router.use('/categorywise', categoryWiseRoutes)
+router.use('/customerBusiness', customerBusinessRoutes)
+router.use('/deliveryman', deliveryManRoutes)
+router.use('/deliveryRestriction', deliveryRestrictionRoutes)
 
 export default router
