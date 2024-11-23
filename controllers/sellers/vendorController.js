@@ -385,10 +385,6 @@ export const updateVendorStatus = catchAsync(async (req, res, next) => {
 })
 
 export const updateShopStatus = catchAsync(async (req, res, next) => {
-    if (!req.body.shopStatus) {
-        return next(new AppError(`Please provide shop status value.`, 400))
-    }
-
     // Perform the update operation
     const doc = await Vendor.findByIdAndUpdate(
         req.params.id,

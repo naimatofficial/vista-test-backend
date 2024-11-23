@@ -55,15 +55,16 @@ router.use('/featured-deals', featureDeal)
 
 //Business
 router.use('/businessgeneral', businessGeneralRoutes)
-router.use('/categorywise', categoryWiseRoutes)
-router.use('/customerBusiness', customerBusinessRoutes)
-router.use('/deliveryman', deliveryManRoutes)
-router.use('/deliveryRestriction', deliveryRestrictionRoutes)
 router.use('/inHouseShop', inHouseShopRotes)
 router.use('/orderBusiness', orderBusinessRoutes)
 router.use('/orderWise', orderWiseRoutes)
 router.use('/productBusiness', productBusinessRoutes)
 router.use('/sellerBusiness', sellerBusinessRoutes)
 router.use('/shippinpMethod', shippinpMethodRoutes)
+
+router.use('/categorywise', categoryWiseRoutes)
+router.use('/customerBusiness', customerBusinessRoutes)
+router.use('/deliveryman', deliveryManRoutes)
+router.use('/deliveryRestriction', deliveryRestrictionRoutes)
 
 export default router
