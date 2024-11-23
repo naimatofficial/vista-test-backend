@@ -1,9 +1,12 @@
+import keys from '../config/keys.js'
 import catchAsync from '../utils/catchAsync.js'
+import { emailTransporter } from '../utils/helpers.js'
 import sendEmail from './emailService.js'
 
-export const sendOrderEmail = catchAsync(async (customer, orderId) => {
+export const sendOrderEmail = catchAsync(async (email, customer, orderId) => {
     const mailOptions = {
-        email: customer.email,
+        from: keys.emailAddress,
+        to: email,
         subject: 'Your Order Has Been Placed',
         html: `
             <!DOCTYPE html>
@@ -15,56 +18,64 @@ export const sendOrderEmail = catchAsync(async (customer, orderId) => {
                 <style>
                     body {
                         font-family: Arial, sans-serif;
-                        background-color: #f9f9f9;
+                        background-color: #f3f4f6;
+                        color: #333;
                         margin: 0;
                         padding: 0;
                     }
-                    table {
-                        width: 100%;
-                        border-spacing: 0;
-                        padding: 0;
-                    }
-                    .email-container {
-                        width: 100%;
+                    .container {
                         max-width: 600px;
-                        margin: 0 auto;
+                        margin: 20px auto;
                         background-color: #ffffff;
-                        padding: 20px;
                         border-radius: 8px;
-                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+                        overflow: hidden;
                     }
-                    h1 {
-                        color: #333;
-                        font-size: 24px;
+                    .header {
+                        background-color: #1D6713;
+                        color: #ffffff;
+                        padding: 20px;
                         text-align: center;
                     }
-                    p {
-                        color: #333;
+                    .header h1 {
+                        margin: 0;
+                        font-size: 24px;
+                    }
+                    .content {
+                        padding: 20px;
+                    }
+                    .content p {
                         font-size: 16px;
-                        line-height: 1.5;
+                        margin: 0 0 10px;
+                        color: #4b5563;
                     }
                     .order-id {
                         font-weight: bold;
-                        color: #007bff;
+                        color: #1D6713;
                     }
-                    .btn {
+                    .cta {
                         display: inline-block;
-                        background-color: #007bff;
-                        color: #ffffff;
-                        padding: 10px 20px;
+                        margin-top: 20px;
+                        padding: 12px 24px;
                         font-size: 16px;
+                        font-weight: bold;
+                        color: #ffffff !important;
+                        background-color: #1D6713;
+                        border-radius: 6px;
                         text-decoration: none;
-                        border-radius: 4px;
                         text-align: center;
+                    }
+                    .cta:hover {
+                        background-color: #14520D;
                     }
                     .footer {
+                        padding: 20px;
                         text-align: center;
-                        font-size: 12px;
-                        color: #666;
-                        margin-top: 20px;
+                        font-size: 14px;
+                        color: #6b7280;
                     }
                     .footer a {
-                        color: #007bff;
+                        color: #1D6713;
                         text-decoration: none;
                     }
                     .footer a:hover {
@@ -73,40 +84,34 @@ export const sendOrderEmail = catchAsync(async (customer, orderId) => {
                 </style>
             </head>
             <body>
-                <table role="presentation" cellpadding="0" cellspacing="0">
-                    <tr>
-                        <td align="center">
-                            <table class="email-container" cellpadding="0" cellspacing="0">
-                                <tr>
-                                    <td>
-                                        <h1>Your Order Has Been Placed!</h1>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <p>Hello ${customer.firstName},</p>
-                                        <p>Thank you for your order! Your order ID is <span class="order-id">${orderId}</span>.</p>
-                                        <p>We will keep you updated on its status soon.</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td align="center">
-                                        <a href="https://vistamart.biz/profile/my-orders/${orderId}" class="btn">View Order Details</a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="footer">
-                                        <p>If you have any questions, feel free to <a href="mailto:support@vistmart.biz">contact us</a>.</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
+                <div class="container">
+                    <div class="header">
+                        <h1>Order Confirmation</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hello ${customer.firstName},</p>
+                        <p>Thank you for your order! Your order ID is <span class="order-id">${orderId}</span>.</p>
+                        <p>We’ll keep you updated on the status of your order soon.</p>
+                        <p>Thank you for choosing Vista Mart. We appreciate your business!</p>
+                    </div>
+                    <div class="footer">
+                        <p>If you have any questions, feel free to <a href="mailto:support@vistamart.biz">contact us</a>.</p>
+                        <p>Best Regards,</p>
+                        <p>Vista Mart Team</p>
+                    </div>
+                </div>
             </body>
             </html>
         `,
     }
 
-    await sendEmail(mailOptions)
+    console.log({ mailOptions })
+
+    emailTransporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+            console.error('Error sending order email:', err)
+        } else {
+            console.log('Order email sent:', info.response)
+        }
+    })
 })

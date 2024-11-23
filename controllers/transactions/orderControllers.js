@@ -110,18 +110,14 @@ export const createOrder = catchAsync(async (req, res, next) => {
     await deleteKeysByPattern('Order')
 
     // Send order confirmation email
-    try {
-        const customer = await Customer.findById(customerId).select(
-            'firstName email'
-        )
-        console.log(customer)
+    const customer = await Customer.findById(customerId).select(
+        'firstName email'
+    )
+    console.log(customer)
 
-        await sendOrderEmail(customer, newOrder.orderId)
+    sendOrderEmail(customer.email, customer, doc._id)
 
-        console.log('Email send to cutomer')
-    } catch (error) {
-        console.error('Error sending email:', error)
-    }
+    console.log('Email send to cutomer')
 
     res.status(201).json({
         status: 'success',

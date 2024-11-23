@@ -3,7 +3,6 @@ import mongoose from 'mongoose'
 import validator from 'validator'
 import slugify from 'slugify'
 import Product from './productModel.js'
-import Order from './../transactions/orderModel.js'
 import { sellerDbConnection } from '../../config/dbConnections.js'
 
 const vendorSchema = new mongoose.Schema(
@@ -52,8 +51,12 @@ const vendorSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: ['pending', 'active', 'inactive', 'rejected'],
+            enum: ['pending', 'active', 'inactive', 'rejected', 'approved'],
             default: 'pending',
+        },
+        shopStatus: {
+            type: Boolean,
+            default: true,
         },
         vendorImage: {
             type: String,
@@ -82,14 +85,6 @@ const vendorSchema = new mongoose.Schema(
         timestamps: true,
     }
 )
-
-// vendorSchema.virtual('totalOrders', {
-//     ref: Order,
-//     localField: '_id',
-//     foreignField: 'products',
-//     count: true,
-//     strictPopulate: false,
-// })
 
 vendorSchema.virtual('products', {
     ref: Product,

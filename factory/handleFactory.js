@@ -199,7 +199,6 @@ export const getAll = (Model, popOptions) =>
         // Base query
         let query = Model.find()
 
-
         // Conditionally apply population
         if (popOptions?.path) {
             if (Array.isArray(popOptions.path)) {
@@ -416,6 +415,11 @@ export const updateStatus = (Model) =>
 
         // delete all document caches related to this model
         await deleteKeysByPattern(Model.modelName)
+        if (Model.modelName !== 'Product') {
+            await deleteKeysByPattern('Product')
+        }
+        await deleteKeysByPattern('Brand')
+        await deleteKeysByPattern('Category')
 
         res.status(200).json({
             status: 'success',

@@ -13,8 +13,8 @@ import redisClient from '../../config/redisConfig.js'
 import APIFeatures from '../../utils/apiFeatures.js'
 
 import { deleteKeysByPattern } from '../../services/redisService.js'
-import { updateStatus } from '../../factory/handleFactory.js'
 import { createSendToken } from '../authController.js'
+import { sendVendorApprovedEmail } from './../../services/vendorMailService.js'
 
 export const createVendor = catchAsync(async (req, res, next) => {
     const {
@@ -349,7 +349,69 @@ export const deleteVendor = catchAsync(async (req, res, next) => {
 })
 
 // Update vendor status
-export const updateVendorStatus = updateStatus(Vendor)
+export const updateVendorStatus = catchAsync(async (req, res, next) => {
+    if (!req.body.status) {
+        return next(new AppError(`Please provide status value.`, 400))
+    }
+
+    // Perform the update operation
+    const doc = await Vendor.findByIdAndUpdate(
+        req.params.id,
+        { status: req.body.status },
+        {
+            new: true,
+            runValidators: true,
+        }
+    )
+
+    // Handle case where the document was not found
+    if (!doc) {
+        return next(new AppError(`No vendor found with that ID`, 404))
+    }
+
+    console.log(doc)
+
+    if (req.body.status === 'approved') {
+        await sendVendorApprovedEmail(doc.email, doc)
+    }
+
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Vendor')
+
+    res.status(200).json({
+        status: 'success',
+        doc,
+    })
+})
+
+export const updateShopStatus = catchAsync(async (req, res, next) => {
+    if (!req.body.shopStatus) {
+        return next(new AppError(`Please provide shop status value.`, 400))
+    }
+
+    // Perform the update operation
+    const doc = await Vendor.findByIdAndUpdate(
+        req.params.id,
+        { shopStatus: req.body.shopStatus },
+        {
+            new: true,
+            runValidators: true,
+        }
+    )
+
+    // Handle case where the document was not found
+    if (!doc) {
+        return next(new AppError(`No vendor found with that ID`, 404))
+    }
+
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Vendor')
+
+    res.status(200).json({
+        status: 'success',
+        doc,
+    })
+})
 
 export const updateVendorPassword = catchAsync(async (req, res, next) => {
     console.log(req.user)
