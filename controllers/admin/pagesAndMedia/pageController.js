@@ -1,4 +1,4 @@
-import Page from './../../../models/admin/pagesAndMedia/pageModel'
+import Page from './../../../models/admin/pagesAndMedia/pageModel.js'
 
 import {
     createOne,

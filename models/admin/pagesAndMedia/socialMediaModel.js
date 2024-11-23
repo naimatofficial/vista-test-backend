@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { adminDbConnection } from '../../config/dbConnections.js'
+import { adminDbConnection } from '../../../config/dbConnections.js'
 
 const socialMediaSchema = new mongoose.Schema(
     {

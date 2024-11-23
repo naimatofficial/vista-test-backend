@@ -6,7 +6,7 @@ import {
     updatePage,
     deletePage,
 } from '../../../controllers/admin/pagesAndMedia/pageController.js'
-import { protect } from '../../middleware/authMiddleware.js'
+import { protect } from '../../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
