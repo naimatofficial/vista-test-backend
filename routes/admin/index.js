@@ -30,6 +30,7 @@ import employeeRoutes from './employeeRoutes.js'
 import roleRoutes from './roleRoutes.js'
 
 import pageRoutes from '../admin/pagesAndMedia/pageRoutes.js'
+import faqRoutes from '../admin/pagesAndMedia/faqRoutes.js'
 import socialMediaRoutes from '../admin/pagesAndMedia/socialMediaRoutes.js'
 
 import { getAdminBusinessAnalytics } from '../../controllers/analytics/bussinessAnalytics.js'
@@ -68,6 +69,7 @@ router.use('/shippinpMethod', shippinpMethodRoutes)
 
 // Pages & Media
 router.use('/pages', pageRoutes)
+router.use('/faqs', faqRoutes)
 router.use('/social-media', socialMediaRoutes)
 
 router.use('/categorywise', categoryWiseRoutes)
