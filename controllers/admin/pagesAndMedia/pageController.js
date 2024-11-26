@@ -5,6 +5,7 @@ import {
     deleteOne,
     getAll,
     getOne,
+    getOneBySlug,
     updateOne,
 } from './../../../factory/handleFactory.js'
 
@@ -15,6 +16,8 @@ export const getPages = getAll(Page)
 
 // Get an Page by ID
 export const getPageById = getOne(Page)
+
+export const getPageBySlug = getOneBySlug(Page)
 
 // Update an Page
 export const updatePage = updateOne(Page)
