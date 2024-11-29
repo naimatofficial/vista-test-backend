@@ -1,4 +1,5 @@
 import {
+    createOne,
     deleteOne,
     getAll,
     getOne,
@@ -11,8 +12,8 @@ import { getCacheKey } from '../../../utils/helpers.js'
 import AppError from '../../../utils/appError.js'
 import catchAsync from '../../../utils/catchAsync.js'
 import FlashDeal from '../../../models/admin/deals/flashDealModel.js'
-import { updateProductStatus } from './../../sellers/productController.js'
 import APIFeatures from '../../../utils/apiFeatures.js'
+import mongoose from 'mongoose'
 
 const checkExpiration = (flashDeal) => {
     const currentDate = new Date()
@@ -21,51 +22,24 @@ const checkExpiration = (flashDeal) => {
 }
 
 // Create Flash Deal
-export const createFlashDeal = catchAsync(async (req, res) => {
-    const { title, startDate, endDate, image } = req.body
-
-    const doc = new FlashDeal({
-        title,
-        startDate,
-        endDate,
-        image,
-    })
-
-    await doc.save()
-
-    if (!doc) {
-        return res.status(400).json({
-            status: 'fail',
-            message: `Flash deal could not be created`,
-        })
-    }
-
-    // delete pervious cache
-    const cacheKey = getCacheKey('FlashDeal', '', req.query)
-    await redisClient.del(cacheKey)
-
-    res.status(201).json({
-        status: 'success',
-        doc,
-    })
-})
-
+export const createFlashDeal = createOne(FlashDeal)
 // Get Flash Deals with Caching
 export const getFlashDeals = catchAsync(async (req, res, next) => {
     const cacheKey = getCacheKey('FlashDeal', '', req.query)
     const cachedDoc = await redisClient.get(cacheKey)
 
     if (cachedDoc) {
+        const cachedData = JSON.parse(cachedDoc)
         return res.status(200).json({
             status: 'success',
             cached: true,
-            results: JSON.parse(cachedDoc).length,
-            doc: JSON.parse(cachedDoc),
+            results: cachedData.deals.length,
+            doc: cachedData,
         })
     }
 
+    // Query flash deals
     let query = FlashDeal.find().lean()
-
     const features = new APIFeatures(query, req.query)
         .filter()
         .sort()
@@ -74,13 +48,26 @@ export const getFlashDeals = catchAsync(async (req, res, next) => {
 
     const deals = await features.query
 
-    // Batch fetching all products, vendors, and customers
-    const productIds = deals.flatMap((deal) => deal.products.map((p) => p))
+    if (!deals || deals.length === 0) {
+        return next(new AppError('No flash deals found', 404))
+    }
 
+    // Fetch associated products
+    const productIds = deals.flatMap((deal) => deal.products.map((p) => p))
     const products = await Product.find({ _id: { $in: productIds } }).lean()
 
-    const flashDeals = { ...deals, products }
+    // Map products to their IDs for quick lookup
+    const productMap = new Map(products.map((p) => [p._id.toString(), p]))
 
+    // Enrich deals with full product details
+    const flashDeals = deals.map((deal) => ({
+        ...deal,
+        products: deal.products.map(
+            (productId) => productMap.get(productId.toString()) || productId
+        ),
+    }))
+
+    // Cache the result
     await redisClient.setEx(cacheKey, 3600, JSON.stringify(flashDeals))
 
     res.status(200).json({
@@ -90,6 +77,61 @@ export const getFlashDeals = catchAsync(async (req, res, next) => {
         doc: flashDeals,
     })
 })
+
+export const getLatestFlashDeal = catchAsync(async (req, res, next) => {
+    const cacheKey = getCacheKey('FlashDeal', 'latest', req.query)
+    const cachedDoc = await redisClient.get(cacheKey)
+
+    if (cachedDoc) {
+        const cachedData = JSON.parse(cachedDoc)
+        return res.status(200).json({
+            status: 'success',
+            cached: true,
+            doc: cachedData,
+        })
+    }
+
+    // Query to find the latest active flash deal
+    const latestDeal = await FlashDeal.findOne({ status: 'active' })
+        .sort({ startDate: -1 }) // Sort by latest start date
+        .lean()
+
+    if (!latestDeal) {
+        return next(new AppError('No active flash deals found', 404))
+    }
+
+    // Validate and convert product IDs to ObjectId
+    const validProductIds = latestDeal.products
+        ?.filter((id) => mongoose.Types.ObjectId.isValid(id)) // Filter valid IDs
+        .map((id) => mongoose.Types.ObjectId(id)) // Convert to ObjectId
+
+    if (!validProductIds || validProductIds.length === 0) {
+        return next(
+            new AppError('No valid products found for this flash deal', 404)
+        )
+    }
+
+    // Fetch products
+    const products = await Product.find({
+        _id: { $in: validProductIds },
+    }).lean()
+
+    // Enrich flash deal with product details
+    const enrichedDeal = {
+        ...latestDeal,
+        products,
+    }
+
+    // Cache the result
+    await redisClient.setEx(cacheKey, 3600, JSON.stringify(enrichedDeal))
+
+    res.status(200).json({
+        status: 'success',
+        cached: false,
+        doc: enrichedDeal,
+    })
+})
+
 // Get Flash Deal by ID
 
 export const getFlashDealById = catchAsync(async (req, res, next) => {

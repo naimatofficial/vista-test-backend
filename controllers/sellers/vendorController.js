@@ -369,9 +369,7 @@ export const updateVendorStatus = catchAsync(async (req, res, next) => {
         return next(new AppError(`No vendor found with that ID`, 404))
     }
 
-    console.log(doc)
-
-    if (req.body.status === 'approved') {
+    if (req.body.status === 'active') {
         await sendVendorApprovedEmail(doc.email, doc)
     }
 
@@ -410,10 +408,8 @@ export const updateShopStatus = catchAsync(async (req, res, next) => {
 })
 
 export const updateVendorPassword = catchAsync(async (req, res, next) => {
-    console.log(req.user)
     const user = await Vendor.findById(req.user._id).select('+password')
 
-    console.log(user)
     // 2) Check the Posted current password is correct
     const correct = await user.correctPassword(
         req.body.passwordCurrent,

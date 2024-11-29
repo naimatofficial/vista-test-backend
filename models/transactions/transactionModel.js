@@ -52,7 +52,6 @@ const transactionSchema = new mongoose.Schema(
         deliveredBy: {
             type: String,
             trim: true,
-            required: [true, "'Delivered By' is required"],
         },
         deliverymanIncentive: {
             type: Number,
