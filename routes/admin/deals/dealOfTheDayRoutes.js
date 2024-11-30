@@ -13,6 +13,9 @@ import { protect } from '../../../middleware/authMiddleware.js'
 import { restrictTo } from '../../../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+router.get('/latest', getSingleDealOfTheDay)
+
 router
     .route('/')
     .post(
@@ -21,8 +24,6 @@ router
         createDealOfTheDay
     )
     .get(protect, getAllDealsOfTheDay)
-
-router.get('/latest', getSingleDealOfTheDay)
 
 router
     .route('/:id')
