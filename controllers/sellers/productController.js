@@ -409,3 +409,132 @@ export const updateProductFeaturedStatus = catchAsync(
         })
     }
 )
+
+export const bulkImportProducts = catchAsync(async (req, res, next) => {
+    const { products } = req.body // Expecting an array of products
+    const user = req.user
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+        return next(new AppError('Invalid or empty products array', 400))
+    }
+
+    const productsToInsert = []
+    const failedProducts = []
+
+    for (const product of products) {
+        try {
+            let {
+                name,
+                description,
+                category,
+                subCategory,
+                subSubCategory,
+                brand,
+                productType,
+                digitalProductType,
+                sku,
+                unit,
+                tags,
+                price,
+                discount,
+                discountType,
+                discountAmount,
+                taxAmount,
+                taxIncluded,
+                minimumOrderQty,
+                shippingCost,
+                stock,
+                colors,
+                thumbnail,
+                images,
+                attributes,
+                videoLink,
+                metaTitle,
+                metaDescription,
+                userId,
+                userType,
+            } = product
+
+            if (userType === 'vendor') {
+                const user = await Vendor.findById(userId)
+                if (!user) {
+                    throw new Error('Referenced vendor does not exist')
+                }
+            } else if (userType === 'in-house') {
+                const user = await Employee.findById(userId)
+                if (!user) {
+                    throw new Error('Referenced user does not exist')
+                }
+            } else {
+                throw new Error('Invalid userType provided')
+            }
+
+            // Calculate discount amount
+            discountAmount =
+                discountType === 'percent'
+                    ? (price * discount) / 100
+                    : discountAmount
+
+            let productData = {
+                name,
+                description,
+                category,
+                subCategory,
+                subSubCategory,
+                brand,
+                productType,
+                sku,
+                unit,
+                tags,
+                price,
+                discount,
+                discountType,
+                discountAmount,
+                taxAmount,
+                taxIncluded,
+                minimumOrderQty,
+                shippingCost,
+                stock,
+                thumbnail,
+                images,
+                colors,
+                attributes,
+                videoLink,
+                userId,
+                userType,
+                metaTitle,
+                metaDescription,
+                slug: slugify(name, { lower: true }),
+            }
+
+            if (productType === 'digital') {
+                productData = { ...productData, digitalProductType }
+            }
+
+            productsToInsert.push(productData)
+        } catch (error) {
+            failedProducts.push({
+                productName: product.name || 'Unknown',
+                error: error.message,
+            })
+        }
+    }
+
+    if (productsToInsert.length > 0) {
+        console.log(productsToInsert)
+        const doc = await Product.insertMany(productsToInsert, {
+            ordered: false,
+        })
+
+        console.log(doc)
+        // Delete all related cache for Product
+        await deleteKeysByPattern('Product')
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Bulk import completed',
+        insertedCount: productsToInsert.length,
+        failedProducts,
+    })
+})

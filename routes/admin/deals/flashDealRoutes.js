@@ -9,6 +9,7 @@ import {
     getFlashDealById,
     removeProductFromFlashDeal,
     updatePublishFlashDeal,
+    getLatestFlashDeal,
 } from '../../../controllers/admin/deals/flashDealController.js'
 
 import { validateSchema } from '../../../middleware/validationMiddleware.js'
@@ -28,6 +29,8 @@ router
         createFlashDeal
     )
     .get(getFlashDeals)
+
+router.get('latest', getLatestFlashDeal)
 
 router
     .route('/:id')

@@ -8,6 +8,7 @@ import {
     updateProductFeaturedStatus,
     updateProduct,
     getProductBySlug,
+    bulkImportProducts,
 } from '../../controllers/sellers/productController.js'
 import { protect, restrictTo } from '../../middleware/authMiddleware.js'
 import { validateSchema } from '../../middleware/validationMiddleware.js'
@@ -16,6 +17,8 @@ import productValidationSchema from '../../validations/admin/sellers/productVali
 const router = express.Router()
 
 router.route('/').post(protect, createProduct).get(getAllProducts)
+
+router.post('/bulk-import', protect, bulkImportProducts)
 
 router
     .route('/:id')
