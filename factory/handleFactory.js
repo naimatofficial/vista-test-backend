@@ -241,7 +241,7 @@ export const getAll = (Model, popOptions) =>
         //     doc,
         // })
 
-        const { sort, limit = 10, page = 1, ...filters } = req.query // Default values for page and limit
+        const { sort, limit, page = 1, ...filters } = req.query // Default values for page and limit
         const hasQueryOptions =
             sort || limit || page || Object.keys(filters).length > 0
 
@@ -267,7 +267,7 @@ export const getAll = (Model, popOptions) =>
         // Calculate pagination details
         const currentPage = Number(page)
         const limitNum = Number(limit)
-        const totalPages = Math.ceil(totalDocs / limitNum)
+        const totalPages = limitNum ? Math.ceil(totalDocs / limitNum) : 1
 
         const response = {
             status: 'success',
