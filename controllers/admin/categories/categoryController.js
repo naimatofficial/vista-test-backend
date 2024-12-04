@@ -31,6 +31,7 @@ export const createCategory = catchAsync(async (req, res) => {
     }
 
     await deleteKeysByPattern('Category')
+    await deleteKeysByPattern('Search')
 
     const cacheKeyOne = getCacheKey('Category', category?._id)
     await redisClient.setEx(cacheKeyOne, 3600, JSON.stringify(category))
@@ -189,6 +190,7 @@ export const deleteCategory = catchAsync(async (req, res, next) => {
     await deleteKeysByPattern('Category')
     await deleteKeysByPattern('SubCategory')
     await deleteKeysByPattern('SubSubCategory')
+    await deleteKeysByPattern('Search')
 
     res.status(204).json({
         status: 'success',

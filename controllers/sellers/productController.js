@@ -111,6 +111,7 @@ export const createProduct = catchAsync(async (req, res, next) => {
 
     // delete all document caches related to this model
     await deleteKeysByPattern('Product')
+    await deleteKeysByPattern('Search')
 
     res.status(201).json({
         status: 'success',
@@ -198,6 +199,39 @@ export const createProduct = catchAsync(async (req, res, next) => {
 
 export const getAllProducts = getAll(Product)
 
+export const searchProducts = catchAsync(async (req, res, next) => {
+    const { query } = req.query
+
+    if (!query) {
+        res.status(304).json({
+            status: 'not-modified',
+            message: 'Search query is required',
+        })
+    }
+
+    // Use $text search for better performance with indexed search
+    // const products = await Product.find({
+    //     $text: { $search: search },
+    // })
+    //     .limit(20)
+    //     .select('name description')
+
+    // Use regex for a case-insensitive search
+    const products = await Product.find({
+        name: { $regex: query, $options: 'i' }, // case-insensitive search
+    })
+        .limit(10)
+        .select(
+            'name description slug thumbnail price discountAmount rating numOfReviews'
+        )
+
+    res.status(200).json({
+        status: 'success',
+        results: products.length,
+        doc: products,
+    })
+})
+
 // Update product details
 export const updateProduct = catchAsync(async (req, res, next) => {
     const { id: productId } = req.params
@@ -248,6 +282,7 @@ export const updateProduct = catchAsync(async (req, res, next) => {
     }
 
     await deleteKeysByPattern('Product')
+    await deleteKeysByPattern('Search')
 
     res.status(200).json({
         status: 'success',

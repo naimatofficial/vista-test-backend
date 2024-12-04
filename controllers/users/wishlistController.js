@@ -15,7 +15,7 @@ export const getAllWishlists = getAll(Wishlist)
 export const deleteWishlist = catchAsync(async (req, res, next) => {
     const { customerId } = req.params
 
-    const doc = await Model.findOneAndDelete({
+    const doc = await Wishlist.findOneAndDelete({
         customer: customerId,
     }).exec()
 

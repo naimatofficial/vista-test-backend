@@ -32,6 +32,8 @@ const brandSchema = new mongoose.Schema(
     }
 )
 
+brandSchema.index({ name: 'text' })
+
 // Virtual to count products associated with the brand
 brandSchema.virtual('productCount', {
     ref: 'Product',

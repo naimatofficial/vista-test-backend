@@ -1,8 +1,13 @@
 import express from 'express'
-import { advancedSearch } from '../../controllers/users/searchController.js'
+import {
+    searchAll,
+    searchProducts,
+} from '../../controllers/users/searchController.js'
 
 const router = express.Router()
 
-router.get('/', advancedSearch)
+router.get('/', searchAll)
+
+router.get('/products', searchProducts)
 
 export default router

@@ -4,20 +4,50 @@ class APIFeatures {
         this.queryString = queryString
     }
 
+    // filter() {
+    //     // 1A) base filter
+    //     const queryObj = { ...this.queryString }
+    //     const excludedFields = ['page', 'limit', 'sort', 'fields']
+    //     excludedFields.forEach((el) => delete queryObj[el])
+
+    //     // 1B) Advance filtering
+    //     let queryStr = JSON.stringify(queryObj)
+    //     queryStr = queryStr.replace(
+    //         /\b(gte|gt|lte|lt)\b/g,
+    //         (match) => `$${match}`
+    //     )
+
+    //     this.query.find(JSON.parse(queryStr))
+
+    //     return this
+    // }
+
     filter() {
-        // 1A) base filter
+        // 1A) Base filter
         const queryObj = { ...this.queryString }
-        const excludedFields = ['page', 'limit', 'sort', 'fields']
+        const excludedFields = ['page', 'limit', 'sort', 'fields', 'query']
         excludedFields.forEach((el) => delete queryObj[el])
 
-        // 1B) Advance filtering
+        // 1B) Advanced filtering
         let queryStr = JSON.stringify(queryObj)
         queryStr = queryStr.replace(
             /\b(gte|gt|lte|lt)\b/g,
             (match) => `$${match}`
         )
 
-        this.query.find(JSON.parse(queryStr))
+        // Parse the query string
+        const parsedFilters = JSON.parse(queryStr)
+
+        // 1C) Handle 'query' parameter for name regex search
+        if (this.queryString.query) {
+            parsedFilters.name = {
+                $regex: this.queryString.query,
+                $options: 'i',
+            }
+        }
+
+        // Apply filters to the query
+        this.query.find(parsedFilters)
 
         return this
     }

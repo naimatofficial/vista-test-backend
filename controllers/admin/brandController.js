@@ -6,11 +6,7 @@ import { getCacheKey } from '../../utils/helpers.js'
 import redisClient from '../../config/redisConfig.js'
 import APIFeatures from '../../utils/apiFeatures.js'
 
-import {
-    createOne,
-    deleteOne,
-    updateStatus,
-} from '../../factory/handleFactory.js'
+import { createOne, updateStatus } from '../../factory/handleFactory.js'
 import Product from '../../models/sellers/productModel.js'
 import Order from '../../models/transactions/orderModel.js'
 import AppError from '../../utils/appError.js'
@@ -209,7 +205,12 @@ export const updateBrand = catchAsync(async (req, res) => {
 
     const doc = await Brand.findByIdAndUpdate(
         req.params.id,
-        { name, logo, imageAltText },
+        {
+            name,
+            logo,
+            imageAltText,
+            slug: slugify(filteredData.name, { lower: true }),
+        },
         { new: true }
     )
 
@@ -220,6 +221,7 @@ export const updateBrand = catchAsync(async (req, res) => {
 
     // Update cache
     await deleteKeysByPattern('Brand')
+    await deleteKeysByPattern('Search')
 
     res.status(200).json({
         status: 'success',
@@ -242,6 +244,7 @@ export const deleteBrand = catchAsync(async (req, res, next) => {
 
     await deleteKeysByPattern('Brand')
     await deleteKeysByPattern('Product')
+    await deleteKeysByPattern('Search')
 
     res.status(204).json({
         status: 'success',

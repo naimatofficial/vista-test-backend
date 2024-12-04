@@ -28,6 +28,8 @@ const categorySchema = new mongoose.Schema(
     }
 )
 
+categorySchema.index({ name: 'text' })
+
 // Virtual to count products associated with the category
 categorySchema.virtual('productCount', {
     ref: 'Product',
