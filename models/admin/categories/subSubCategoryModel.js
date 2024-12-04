@@ -36,6 +36,8 @@ const subSubCategorySchema = new mongoose.Schema(
     }
 )
 
+subSubCategorySchema.index({ name: 'text' })
+
 subSubCategorySchema.pre(/^find/, function (next) {
     this.populate({
         path: 'mainCategory subCategory',

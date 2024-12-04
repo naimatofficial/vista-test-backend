@@ -8,6 +8,7 @@ import transactionRoutes from './transactions/index.js'
 import sellerRoutes from './sellers/index.js'
 
 import { validateSessionToken } from '../middleware/authMiddleware.js'
+import { searchProducts } from '../controllers/sellers/productController.js'
 
 const router = express.Router()
 
@@ -19,6 +20,8 @@ router.get('/', (req, res) => {
 })
 
 router.post('/validate-session', validateSessionToken)
+
+// router.get('/search', searchProducts)
 
 // Image routes
 router.use('/image', uploadRoutes)
