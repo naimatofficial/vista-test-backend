@@ -241,7 +241,7 @@ export const getAll = (Model, popOptions) =>
         //     doc,
         // })
 
-        const { sort, limit, page = 1, ...filters } = req.query // Default values for page and limit
+        const { sort, limit, page = 1, ...filters } = req.query
         const hasQueryOptions =
             sort || limit || page || Object.keys(filters).length > 0
 
@@ -261,7 +261,7 @@ export const getAll = (Model, popOptions) =>
         } else {
             // Fetch all documents if no query options are applied
             doc = await Model.find().lean()
-            totalDocs = doc.length // Total is simply the length of the result
+            totalDocs = doc.length
         }
 
         // Calculate pagination details
