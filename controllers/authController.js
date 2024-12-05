@@ -243,7 +243,7 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
         // const domainName = `${req.protocol}://${req.get('host')}`
         // const resetURL = `${domainName}/auth/resetPassword/${resetToken}`
 
-        const resetURL = `https://vistamart.biz/auth/resetPassword/${resetToken}`
+        const resetURL = `https://vistamart.biz/auth/reset-password/${resetToken}`
 
         // Get the user's IP address
         const ipAddress =
