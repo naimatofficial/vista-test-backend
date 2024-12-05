@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import { checkReferenceId } from '../../utils/helpers.js'
 import { sellerDbConnection } from '../../config/dbConnections.js'
+import Vendor from './vendorModel.js'
 
 const vendorBankSchema = new mongoose.Schema(
     {

@@ -41,6 +41,10 @@ app.use(cookieParser())
 // Sanitize the request after body and cookies are parsed
 app.use(ExpressMongoSanitize())
 
+//If you are using a reverse proxy (e.g., Nginx, AWS Load Balancer),
+// ensure it is configured to set the x - forwarded -for header.
+app.set('trust proxy', true)
+
 // Developing logging
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'))

@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs'
+import * as crypto from 'crypto'
 import mongoose from 'mongoose'
 import validator from 'validator'
 import slugify from 'slugify'
-import Product from './productModel.js'
 import { sellerDbConnection } from '../../config/dbConnections.js'
 
 const vendorSchema = new mongoose.Schema(
@@ -87,10 +87,13 @@ const vendorSchema = new mongoose.Schema(
 )
 
 vendorSchema.virtual('products', {
-    ref: Product,
-    localField: '_id',
-    foreignField: 'userId',
-    strictPopulate: false,
+    ref: 'Product', // Reference the Product model
+    localField: '_id', // Match the _id of the vendor
+    foreignField: 'userId', // Match the userId field in the Product model
+    justOne: false, // If you want an array of products
+    // options: {
+    //     match: { status: 'approved' }, // Filter only approved products
+    // },
 })
 
 vendorSchema.virtual('bank', {
