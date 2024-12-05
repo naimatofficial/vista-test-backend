@@ -91,8 +91,7 @@ export const forgotEmployeePassword = catchAsync(async (req, res, next) => {
     try {
         // const resetURL = `${process.env.DOMAIN_NAME}/users/resetPassword/${resetToken}`
 
-        const domainName = `${req.protocol}://${req.get('host')}`
-        const resetURL = `${domainName}/auth/resetPassword/${resetToken}`
+        const resetURL = `https://admin.vistamart.biz/auth/resetPassword/${resetToken}`
 
         // Get the user's IP address
         const ipAddress =
