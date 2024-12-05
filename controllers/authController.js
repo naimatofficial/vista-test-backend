@@ -238,10 +238,16 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
 
     // 3) Send it to user's email
     try {
-        const resetURL = `${process.env.DOMAIN_NAME}/users/resetPassword/${resetToken}`
+        // const resetURL = `${process.env.DOMAIN_NAME}/auth/resetPassword/${resetToken}`
+
+        const domainName = `${req.protocol}://${req.get('host')}`
+        const resetURL = `${domainName}/auth/resetPassword/${resetToken}`
 
         // Get the user's IP address
-        const ipAddress = req.ip
+        const ipAddress =
+            req.headers['x-forwarded-for']?.split(',')[0] ||
+            req.socket.remoteAddress
+
         const timestamp =
             new Date().toISOString().replace('T', ' ').substring(0, 16) + ' GMT'
 
@@ -325,7 +331,17 @@ export const resetPassword = catchAsync(async (req, res, next) => {
         html: message,
     })
 
-    createSendToken(user, 200, res)
+    await removeRefreshToken(user._id.toString())
+
+    // Clear the refreshToken cookie on the client
+    res.clearCookie('jwt')
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Password reset successfully.',
+    })
+
+    // createSendToken(user, 200, res)
 })
 
 export const updatePassword = catchAsync(async (req, res, next) => {

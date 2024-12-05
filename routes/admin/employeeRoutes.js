@@ -9,6 +9,8 @@ import {
     updateEmployeeStatus,
     employeeLogin,
     updateEmployeePassword,
+    forgotEmployeePassword,
+    resetEmployeePassword,
 } from '../../controllers/admin/employeeController.js'
 
 import { logout } from '../../controllers/authController.js'
@@ -21,6 +23,8 @@ router.post('/login', employeeLogin)
 router.post('/logout', protect, logout)
 
 router.put('/update-password', protect, updateEmployeePassword)
+router.post('/forgot-password', forgotEmployeePassword)
+router.put('/reset-password/:token', resetEmployeePassword)
 
 router.route('/').post(protect, createEmployee).get(protect, getEmployees)
 

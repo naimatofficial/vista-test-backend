@@ -10,6 +10,8 @@ import {
     getVendorBySlug,
     updateVendorPassword,
     updateShopStatus,
+    forgotVendorPassword,
+    resetVendorPassword,
 } from '../../controllers/sellers/vendorController.js'
 import { validateSchema } from '../../middleware/validationMiddleware.js'
 import vendorValidationSchema from '../../validations/admin/sellers/vendorValidator.js'
@@ -27,6 +29,8 @@ router.post('/login', loginVendor)
 router.post('/logout', protect, logout)
 
 router.put('/update-password', protect, updateVendorPassword)
+router.post('/forgot-password', forgotVendorPassword)
+router.put('/reset-password/:token', resetVendorPassword)
 
 router.route('/').post(protect, createVendor).get(getAllVendors)
 

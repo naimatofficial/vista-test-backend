@@ -1,4 +1,5 @@
 import slugify from 'slugify'
+import * as crypto from 'crypto'
 
 import Vendor from '../../models/sellers/vendorModel.js'
 import Product from '../../models/sellers/productModel.js'
@@ -8,13 +9,21 @@ import ProductReview from '../../models/users/productReviewModel.js'
 import AppError from '../../utils/appError.js'
 
 import catchAsync from '../../utils/catchAsync.js'
-import { getCacheKey } from '../../utils/helpers.js'
+import {
+    createPasswordResetMessage,
+    createPasswordResetConfirmationMessage,
+    getCacheKey,
+} from '../../utils/helpers.js'
 import redisClient from '../../config/redisConfig.js'
 import APIFeatures from '../../utils/apiFeatures.js'
 
-import { deleteKeysByPattern } from '../../services/redisService.js'
+import {
+    deleteKeysByPattern,
+    removeRefreshToken,
+} from '../../services/redisService.js'
 import { createSendToken } from '../authController.js'
 import { sendVendorApprovedEmail } from './../../services/vendorMailService.js'
+import sendEmail from '../../services/emailService.js'
 
 export const createVendor = catchAsync(async (req, res, next) => {
     const {
@@ -137,15 +146,12 @@ export const updateVendor = catchAsync(async (req, res, next) => {
 export const getAllVendors = catchAsync(async (req, res, next) => {
     const cacheKey = getCacheKey('Vendor', '', req.query)
 
-    // Check cache first
-    const cacheddoc = await redisClient.get(cacheKey)
-
-    if (cacheddoc !== null) {
+    const cachedResults = await redisClient.get(cacheKey)
+    if (cachedResults) {
         return res.status(200).json({
+            ...JSON.parse(cachedResults),
             status: 'success',
             cached: true,
-            results: JSON.parse(cacheddoc).length,
-            doc: JSON.parse(cacheddoc),
         })
     }
 
@@ -446,16 +452,26 @@ export const forgotVendorPassword = catchAsync(async (req, res, next) => {
     const resetToken = user.createPasswordResetToken()
     await user.save({ validateBeforeSave: false })
 
+    console.log(resetToken, user)
+
     // 3) Send it to user's email
     try {
-        const resetURL = `${process.env.DOMAIN_NAME}/users/resetPassword/${resetToken}`
+        // const resetURL = `${process.env.DOMAIN_NAME}/users/resetPassword/${resetToken}`
+
+        const domainName = `${req.protocol}://${req.get('host')}`
+        const resetURL = `${domainName}/auth/resetPassword/${resetToken}`
 
         // Get the user's IP address
-        const ipAddress = req.ip
+        const ipAddress =
+            req.headers['x-forwarded-for']?.split(',')[0] ||
+            req.socket.remoteAddress
+
         const timestamp =
             new Date().toISOString().replace('T', ' ').substring(0, 16) + ' GMT'
 
-        const message = createPasswordResetMessage(
+        console.log(user.email, ipAddress, timestamp, resetURL)
+
+        const message = await createPasswordResetMessage(
             user.email,
             ipAddress,
             timestamp,
@@ -534,5 +550,13 @@ export const resetVendorPassword = catchAsync(async (req, res, next) => {
         html: message,
     })
 
-    createSendToken(user, 200, res)
+    await removeRefreshToken(user._id.toString())
+
+    // Clear the refreshToken cookie on the client
+    res.clearCookie('jwt')
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Password reset successfully.',
+    })
 })

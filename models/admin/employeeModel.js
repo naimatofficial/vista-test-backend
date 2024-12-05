@@ -1,6 +1,8 @@
 import mongoose from 'mongoose'
 import validator from 'validator'
 import bcrypt from 'bcryptjs'
+import * as crypto from 'crypto'
+
 import { adminDbConnection } from '../../config/dbConnections.js'
 
 const employeeSchema = new mongoose.Schema(
