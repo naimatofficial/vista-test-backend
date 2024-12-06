@@ -146,6 +146,7 @@ const productSchema = new mongoose.Schema(
             min: [0, 'Rating cannot be negative'],
             max: [5, 'Rating cannot exceed 5'],
             default: 0,
+            set: (val) => parseFloat((Math.round(val * 10) / 10).toFixed(1)),
         },
         numOfReviews: {
             type: Number,

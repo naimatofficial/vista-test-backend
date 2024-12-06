@@ -48,7 +48,11 @@ const vendorSchema = new mongoose.Schema(
             required: [true, 'Please provide your address.'],
             trim: true,
         },
-
+        verified: {
+            type: String,
+            enum: ['false', 'true'],
+            default: false,
+        },
         status: {
             type: String,
             enum: ['pending', 'active', 'inactive', 'rejected'],
@@ -71,6 +75,16 @@ const vendorSchema = new mongoose.Schema(
             type: String,
             default: 'vendor',
         },
+        shopRating: {
+            type: Number,
+            max: [5, 'Rating cannot exceed 5'],
+            default: 0,
+            set: (val) => parseFloat((Math.round(val * 10) / 10).toFixed(1)),
+        },
+        totalReviews: {
+            type: Number,
+            default: 0,
+        },
         slug: {
             type: String,
             unique: true,
@@ -86,15 +100,22 @@ const vendorSchema = new mongoose.Schema(
     }
 )
 
-vendorSchema.virtual('products', {
-    ref: 'Product', // Reference the Product model
-    localField: '_id', // Match the _id of the vendor
-    foreignField: 'userId', // Match the userId field in the Product model
-    justOne: false, // If you want an array of products
-    // options: {
-    //     match: { status: 'approved' }, // Filter only approved products
-    // },
-})
+// vendorSchema.virtual('products', {
+//     ref: 'Product', // Reference the Product model
+//     localField: '_id', // Match the _id of the vendor
+//     foreignField: 'userId', // Match the userId field in the Product model
+//     count: true, // Directly count the number of related products
+// })
+
+// vendorSchema.virtual('approvedProducts', {
+//     ref: 'Product', // Reference the Product model
+//     localField: '_id', // Vendor's _id
+//     foreignField: 'userId', // Match the userId field in Product model
+//     count: true, // Count the number of matching documents
+//     options: {
+//         match: { status: 'approved' }, // Filter only approved products
+//     },
+// })
 
 vendorSchema.virtual('bank', {
     ref: 'VendorBank',
