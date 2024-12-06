@@ -212,35 +212,6 @@ export const getAll = (Model, popOptions) =>
             }
         }
 
-        // Check if any query parameter for sorting, filtering, limiting, or pagination is present
-        // const { sort, limit, page, ...filters } = req.query
-        // const hasQueryOptions =
-        //     sort || limit || page || Object.keys(filters).length > 0
-
-        // // If query options are present, apply them; otherwise, return the data
-        // let doc
-        // if (hasQueryOptions) {
-        //     const features = new APIFeatures(query, req.query)
-        //         .filter()
-        //         .sort()
-        //         .fieldsLimit()
-        //         .paginate()
-
-        //     doc = await features.query
-        // } else {
-        //     doc = await Model.find().lean()
-        // }
-
-        // // Cache the result if not in cache
-        // await redisClient.setEx(cacheKey, 3600, JSON.stringify(doc))
-
-        // res.status(200).json({
-        //     status: 'success',
-        //     cached: false,
-        //     results: doc.length,
-        //     doc,
-        // })
-
         const { sort, limit, page = 1, ...filters } = req.query
         const hasQueryOptions =
             sort || limit || page || Object.keys(filters).length > 0
