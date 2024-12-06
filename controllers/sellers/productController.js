@@ -133,6 +133,117 @@ export const createProduct = catchAsync(async (req, res, next) => {
     })
 })
 
+// export const getAllProducts = catchAsync(async (req, res, next) => {
+//     const cacheKey = getCacheKey('Product', '', req.query)
+
+//     // Check cache first
+//     const cachedResults = await redisClient.get(cacheKey)
+//     if (cachedResults) {
+//         return res.status(200).json({
+//             ...JSON.parse(cachedResults),
+//             status: 'success',
+//             cached: true,
+//         })
+//     }
+
+//     const { sort, limit, page = 1, ...filters } = req.query
+//     const hasQueryOptions =
+//         sort || limit || page || Object.keys(filters).length > 0
+
+//     let totalDocs = 0
+//     let doc = []
+
+//     // Query Products (from primary database)
+//     const productQuery = Product.find(filters)
+//         .skip((page - 1) * limit)
+//         .limit(parseInt(limit, 10))
+//         .sort()
+
+//     doc = await productQuery.lean()
+//     totalDocs = await Product.countDocuments(filters)
+
+//     // Fetch related data from other databases (e.g., Vendor, Category, Brand)
+//     // Assuming you have connections to other databases set up
+//     const vendorIds = doc.map((product) => product.userId).filter(Boolean)
+//     const vendorData = await Vendor.find({
+//         _id: { $in: vendorIds },
+//     })
+//         .select('firstName lastName slug shopName address')
+//         .lean()
+
+//     const categoryIds = doc.map((product) => product.category).filter(Boolean)
+//     const categoryData = await Category.find({
+//         _id: { $in: categoryIds },
+//     })
+//         .select('name slug')
+//         .lean()
+
+//     const subCategoryIds = doc
+//         .map((product) => product.subCategory)
+//         .filter(Boolean) // Filter out undefined or null values
+//     const subCategoryData = await SubCategory.find({
+//         _id: { $in: subCategoryIds },
+//     })
+//         .select('name slug')
+//         .lean()
+
+//     const brandIds = doc.map((product) => product.brand).filter(Boolean)
+//     const brandData = await Brand.find({ _id: { $in: brandIds } })
+//         .select('name slug logo')
+//         .lean()
+
+//     // Fetch total orders related to the product
+//     const productIds = doc.map((product) => product._id).filter(Boolean)
+//     let totalOrders = await Order.countDocuments({
+//         'products.product': { $in: productIds },
+//     }).lean()
+
+//     // Merge related data into product results
+//     doc = doc.map((product) => {
+//         const vendor = vendorData?.find(
+//             (v) => v._id.toString() === product.userId?.toString() // Safeguard with optional chaining
+//         )
+//         const category = categoryData?.find(
+//             (c) => c._id.toString() === product.category?.toString() // Safeguard with optional chaining
+//         )
+//         const subCategory = subCategoryData?.find(
+//             (c) => c._id.toString() === product.subCategory?.toString() // Safeguard with optional chaining
+//         )
+//         const brand = brandData?.find(
+//             (b) => b._id.toString() === product.brand?.toString() // Safeguard with optional chaining
+//         )
+
+//         return {
+//             ...product,
+//             vendor: vendor || null, // Default to null if no match found
+//             category: category || null, // Default to null if no match found
+//             subCategory: subCategory || null, // Default to null if no match found
+//             brand: brand || null, // Default to null if no match found
+//             totalOrders: totalOrders || 0,
+//         }
+//     })
+
+//     // Pagination details
+//     const currentPage = Number(page)
+//     const limitNum = Number(limit)
+//     const totalPages = limitNum ? Math.ceil(totalDocs / limitNum) : 1
+
+//     const response = {
+//         status: 'success',
+//         cached: false,
+//         totalDocs,
+//         results: doc.length,
+//         currentPage,
+//         totalPages,
+//         doc,
+//     }
+
+//     // Cache the result
+//     await redisClient.setEx(cacheKey, 3600, JSON.stringify(response))
+
+//     res.status(200).send(response)
+// })
+
 export const getAllProducts = catchAsync(async (req, res, next) => {
     const cacheKey = getCacheKey('Product', '', req.query)
 
@@ -147,42 +258,45 @@ export const getAllProducts = catchAsync(async (req, res, next) => {
     }
 
     const { sort, limit, page = 1, ...filters } = req.query
+
+    // Apply query options (pagination, sorting, filters)
     const hasQueryOptions =
         sort || limit || page || Object.keys(filters).length > 0
-
     let totalDocs = 0
     let doc = []
 
-    // Query Products (from primary database)
-    const productQuery = Product.find(filters)
-        .skip((page - 1) * limit)
-        .limit(parseInt(limit, 10))
-    if (sort) {
-        productQuery.sort({ [sort]: 1 })
+    if (hasQueryOptions) {
+        const features = new APIFeatures(Product.find(), req.query)
+            .filter()
+            .sort()
+            .fieldsLimit()
+
+        // Step 1: Get total document count
+        totalDocs = await features.query.clone().countDocuments()
+
+        // Step 2: Apply pagination and fetch data
+        features.paginate()
+        doc = await features.query.lean()
+    } else {
+        // Fetch all documents if no query options are applied
+        doc = await Product.find().lean()
+        totalDocs = doc.length
     }
 
-    doc = await productQuery.lean()
-    totalDocs = await Product.countDocuments(filters)
-
-    // Fetch related data from other databases (e.g., Vendor, Category, Brand)
-    // Assuming you have connections to other databases set up
+    // Fetch related data (from different databases) using manual queries
     const vendorIds = doc.map((product) => product.userId).filter(Boolean)
-    const vendorData = await Vendor.find({
-        _id: { $in: vendorIds },
-    })
+    const vendorData = await Vendor.find({ _id: { $in: vendorIds } })
         .select('firstName lastName slug shopName address')
         .lean()
 
     const categoryIds = doc.map((product) => product.category).filter(Boolean)
-    const categoryData = await Category.find({
-        _id: { $in: categoryIds },
-    })
+    const categoryData = await Category.find({ _id: { $in: categoryIds } })
         .select('name slug')
         .lean()
 
     const subCategoryIds = doc
         .map((product) => product.subCategory)
-        .filter(Boolean) // Filter out undefined or null values
+        .filter(Boolean)
     const subCategoryData = await SubCategory.find({
         _id: { $in: subCategoryIds },
     })
@@ -194,33 +308,32 @@ export const getAllProducts = catchAsync(async (req, res, next) => {
         .select('name slug logo')
         .lean()
 
-    // Fetch total orders related to the product
     const productIds = doc.map((product) => product._id).filter(Boolean)
-    let totalOrders = await Order.countDocuments({
+    const totalOrders = await Order.countDocuments({
         'products.product': { $in: productIds },
     }).lean()
 
-    // Merge related data into product results
+    // Merge related data into the products
     doc = doc.map((product) => {
         const vendor = vendorData?.find(
-            (v) => v._id.toString() === product.userId?.toString() // Safeguard with optional chaining
+            (v) => v._id.toString() === product.userId?.toString()
         )
         const category = categoryData?.find(
-            (c) => c._id.toString() === product.category?.toString() // Safeguard with optional chaining
+            (c) => c._id.toString() === product.category?.toString()
         )
         const subCategory = subCategoryData?.find(
-            (c) => c._id.toString() === product.subCategory?.toString() // Safeguard with optional chaining
+            (c) => c._id.toString() === product.subCategory?.toString()
         )
         const brand = brandData?.find(
-            (b) => b._id.toString() === product.brand?.toString() // Safeguard with optional chaining
+            (b) => b._id.toString() === product.brand?.toString()
         )
 
         return {
             ...product,
-            vendor: vendor || null, // Default to null if no match found
-            category: category || null, // Default to null if no match found
-            subCategory: subCategory || null, // Default to null if no match found
-            brand: brand || null, // Default to null if no match found
+            vendor: vendor || null,
+            category: category || null,
+            subCategory: subCategory || null,
+            brand: brand || null,
             totalOrders: totalOrders || 0,
         }
     })
