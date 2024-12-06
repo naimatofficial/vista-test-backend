@@ -362,6 +362,37 @@ export const getOrderById = catchAsync(async (req, res, next) => {
         doc: detailedOrder,
     })
 })
+export const getOrderStatus = catchAsync(async (req, res, next) => {
+    const { orderId } = req.params
+
+    const cacheKey = getCacheKey('Order', orderId)
+
+    // Check cache first
+    const cachedDoc = await redisClient.get(cacheKey)
+
+    if (cachedDoc) {
+        return res.status(200).json({
+            status: 'success',
+            cached: true,
+            doc: JSON.parse(cachedDoc),
+        })
+    }
+
+    // Fetch the order from the main database
+    const order = await Order.findOne({ orderId }).select('status').lean()
+
+    if (!order) {
+        return next(new AppError('No track order found with that ID', 404))
+    }
+
+    await redisClient.setEx(cacheKey, 3600, JSON.stringify(order))
+
+    res.status(200).json({
+        status: 'success',
+        cached: false,
+        doc: order,
+    })
+})
 
 export const getCustomerOrderById = catchAsync(async (req, res, next) => {
     const { id } = req.params
