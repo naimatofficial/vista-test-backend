@@ -24,6 +24,7 @@ import {
 import { createSendToken } from '../authController.js'
 import { sendVendorApprovedEmail } from './../../services/vendorMailService.js'
 import sendEmail from '../../services/emailService.js'
+import mongoose from 'mongoose'
 
 export const createVendor = catchAsync(async (req, res, next) => {
     const {
@@ -142,65 +143,6 @@ export const updateVendor = catchAsync(async (req, res, next) => {
     })
 })
 
-// Get all vendors
-// export const getAllVendors = catchAsync(async (req, res, next) => {
-//     const cacheKey = getCacheKey('Vendor', '', req.query)
-
-//     const cachedResults = await redisClient.get(cacheKey)
-//     if (cachedResults) {
-//         return res.status(200).json({
-//             ...JSON.parse(cachedResults),
-//             status: 'success',
-//             cached: true,
-//         })
-//     }
-
-//     // EXECUTE QUERY
-//     let query = Vendor.find().populate('products bank').lean()
-
-//     const features = new APIFeatures(query, req.query)
-//         .filter()
-//         .sort()
-//         .fieldsLimit()
-//         .paginate()
-
-//     const vendors = await features.query
-
-//     // Step 2: Create an array to hold the vendor data with reviews and orders
-//     const vendorsWithDetails = await Promise.all(
-//         vendors.map(async (vendor) => {
-//             // Step 3: Fetch reviews for the vendor's products from the external database
-//             const reviews = await ProductReview.find({
-//                 product: { $in: vendor.products }, // Assuming vendor.products contains product IDs
-//             }).lean()
-
-//             // Step 4: Fetch orders for the vendor's products from the external database
-//             const orders = await Order.find({
-//                 products: { $in: vendor.products }, // Assuming vendor.products contains product IDs
-//             }).lean()
-
-//             // Combine vendor, reviews, and orders into one object
-//             return {
-//                 ...vendor,
-//                 reviews,
-//                 orders,
-//                 totalProducts: vendor.products.length, // Total number of products
-//                 totalOrders: orders.length, // Total number of orders
-//             }
-//         })
-//     )
-
-//     // Cache the result
-//     await redisClient.setEx(cacheKey, 3600, JSON.stringify(vendorsWithDetails))
-
-//     res.status(200).json({
-//         status: 'success',
-//         cached: false,
-//         results: vendorsWithDetails.length,
-//         doc: vendorsWithDetails,
-//     })
-// })
-
 export const getAllVendors = catchAsync(async (req, res, next) => {
     const cacheKey = getCacheKey('Vendor', '', req.query)
 
@@ -214,198 +156,158 @@ export const getAllVendors = catchAsync(async (req, res, next) => {
         })
     }
 
-    // Step 2: Extract query options
+    // Step 2: Extract query options and initialize ApiFeatures
     const { sort, limit = 100, page = 1, ...filters } = req.query
-    const skip = (page - 1) * limit
 
-    // Step 3: Build the aggregation pipeline
-    const pipeline = [
-        // Match filters
-        { $match: filters },
+    const apiFeatures = new APIFeatures(Vendor.find(filters), req.query)
+        .filter()
+        .sort()
+        .paginate()
 
-        // Lookup and count approved products
-        {
-            $lookup: {
-                from: 'products',
-                let: { vendorId: '$_id' },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: { $eq: ['$userId', '$$vendorId'] },
-                            status: 'approved',
-                        },
-                    },
-                    { $count: 'approvedCount' },
-                ],
-                as: 'approvedProductsData',
-            },
-        },
+    // Step 3: Fetch vendors based on filters and pagination
+    const vendors = await apiFeatures.query.lean()
 
-        // Lookup and count total products
-        {
-            $lookup: {
-                from: 'products',
-                let: { vendorId: '$_id' },
-                pipeline: [
-                    { $match: { $expr: { $eq: ['$userId', '$$vendorId'] } } },
-                    { $count: 'totalCount' },
-                ],
-                as: 'totalProductsData',
-            },
-        },
+    // Step 4: Initialize an array to store results
+    const results = []
 
-        // Lookup and count total orders
-        {
-            $lookup: {
-                from: 'orders',
-                let: { vendorId: '$_id' },
-                pipeline: [
-                    { $unwind: '$products' },
-                    {
-                        $match: {
-                            $expr: { $eq: ['$products.userId', '$$vendorId'] },
-                        },
-                    },
-                    { $count: 'orderCount' },
-                ],
-                as: 'totalOrdersData',
-            },
-        },
+    // Step 5: Fetch product counts for each vendor using aggregation pipeline
+    for (let vendor of vendors) {
+        const vendorId = vendor._id
 
-        // Simplify fields and remove redundant arrays
-        {
-            $addFields: {
-                approvedProducts: {
-                    $ifNull: [
-                        {
-                            $arrayElemAt: [
-                                '$approvedProductsData.approvedCount',
-                                0,
-                            ],
-                        },
-                        0,
+        // Aggregation pipeline for products
+        const [productCounts] = await Product.aggregate([
+            { $match: { userId: vendorId } }, // Match products for the vendor
+            {
+                $facet: {
+                    approvedCount: [
+                        { $match: { status: 'approved' } },
+                        { $count: 'approvedCount' },
                     ],
-                },
-                totalProducts: {
-                    $ifNull: [
-                        { $arrayElemAt: ['$totalProductsData.totalCount', 0] },
-                        0,
-                    ],
-                },
-                totalOrders: {
-                    $ifNull: [
-                        { $arrayElemAt: ['$totalOrdersData.orderCount', 0] },
-                        0,
+                    totalCount: [{ $count: 'totalCount' }],
+                    orderCount: [
+                        { $unwind: '$orders' },
+                        { $match: { 'orders.userId': vendorId } },
+                        { $count: 'orderCount' },
                     ],
                 },
             },
-        },
+        ])
 
-        // Remove unused fields
-        {
-            $project: {
-                approvedProductsData: 0,
-                totalProductsData: 0,
-                totalOrdersData: 0,
-            },
-        },
+        const approvedProducts =
+            productCounts?.approvedCount?.[0]?.approvedCount || 0
+        const totalProducts = productCounts?.totalCount?.[0]?.totalCount || 0
+        const totalOrders = productCounts?.orderCount?.[0]?.orderCount || 0
 
-        // Add pagination stages if required
-        ...(page ? [{ $skip: (page - 1) * limit }] : []),
-        ...(limit ? [{ $limit: parseInt(limit, 10) }] : []),
-    ]
+        // Add the data to the vendor object
+        vendor.approvedProducts = approvedProducts
+        vendor.totalProducts = totalProducts
+        vendor.totalOrders = totalOrders
 
-    // Step 4: Execute the aggregation
-    const [doc, totalDocs] = await Promise.all([
-        Vendor.aggregate(pipeline),
-        Vendor.countDocuments(filters),
-    ])
+        // Add reviews for the vendor (optional, can be optimized)
+        vendor.reviews = await ProductReview.find({
+            product: { $in: vendor.products },
+        }).lean()
 
-    // Step 5: Calculate pagination details
+        // Push the updated vendor to results
+        results.push(vendor)
+    }
+
+    // Step 6: Calculate pagination details
+    const totalDocs = await Vendor.countDocuments()
     const totalPages = Math.ceil(totalDocs / limit)
 
-    // Step 6: Build the response
+    // Step 7: Build the response
     const response = {
         status: 'success',
         cached: false,
         totalDocs,
-        results: doc.length,
+        results: results.length,
         currentPage: Number(page),
         totalPages,
-        doc,
+        doc: results,
     }
 
-    // Step 7: Cache the result
+    // Step 8: Cache the result
     await redisClient.setEx(cacheKey, 3600, JSON.stringify(response))
 
-    // Step 8: Send the response
+    // Step 9: Send the response
     res.status(200).json(response)
 })
 
 // Get vendor by ID
 export const getVendorById = catchAsync(async (req, res, next) => {
-    const vendorId = req.params.id
+    const vendorId = req.params.id // Assuming vendorId is passed in the URL params
 
-    const cacheKey = getCacheKey('Vendor', vendorId)
+    const cacheKey = getCacheKey('Vendor', vendorId, req.query)
 
-    // Check cache first
-    const cachedDoc = await redisClient.get(cacheKey)
-
-    if (cachedDoc) {
+    // Step 1: Check cache for existing results
+    const cachedResults = await redisClient.get(cacheKey)
+    if (cachedResults) {
         return res.status(200).json({
+            ...JSON.parse(cachedResults),
             status: 'success',
             cached: true,
-            doc: JSON.parse(cachedDoc),
         })
     }
 
-    // If not in cache, fetch from database
-    let vendor = await Vendor.findById(vendorId)
-        .populate('products bank')
-        .lean()
+    // Step 2: Extract query options (if any)
+    // Step 3: Fetch the vendor based on the provided ID
+    const vendor = await Vendor.findById(vendorId).lean()
 
+    // Check if vendor exists
     if (!vendor) {
-        return next(new AppError(`No vendor found with that id`, 404))
+        return res.status(404).json({
+            status: 'fail',
+            message: 'Vendor not found',
+        })
     }
 
-    const reviews = await ProductReview.find({
+    // Step 4: Fetch product counts for the vendor using aggregation pipeline
+    const [productCounts] = await Product.aggregate([
+        { $match: { userId: vendorId } }, // Match products for the vendor
+        {
+            $facet: {
+                approvedCount: [
+                    { $match: { status: 'approved' } },
+                    { $count: 'approvedCount' },
+                ],
+                totalCount: [{ $count: 'totalCount' }],
+                orderCount: [
+                    { $unwind: '$orders' },
+                    { $match: { 'orders.userId': vendorId } },
+                    { $count: 'orderCount' },
+                ],
+            },
+        },
+    ])
+
+    const approvedProducts =
+        productCounts?.approvedCount?.[0]?.approvedCount || 0
+    const totalProducts = productCounts?.totalCount?.[0]?.totalCount || 0
+    const totalOrders = productCounts?.orderCount?.[0]?.orderCount || 0
+
+    // Add the data to the vendor object
+    vendor.approvedProducts = approvedProducts
+    vendor.totalProducts = totalProducts
+    vendor.totalOrders = totalOrders
+
+    // Optional: Add reviews for the vendor (can be optimized)
+    vendor.reviews = await ProductReview.find({
         product: { $in: vendor.products },
     }).lean()
 
-    // Step 1: Fetch total products for the brand
-    const products = vendor.products
-
-    const totalProducts = products?.length || 0
-    let orders = []
-
-    if (products && products.length) {
-        // Extract product IDs from the products
-        const productIds = products.map((product) => product._id)
-
-        // Step 3: Fetch total orders that contain these products
-        orders = await Order.find({
-            products: { $in: productIds }, // Match orders that contain any of the product IDs
-        }).lean()
-    }
-
-    const totalOrders = orders.length || 0
-
-    const doc = {
-        ...vendor,
-        reviews,
-        orders,
-        totalProducts,
-        totalOrders,
-    }
-
-    // Cache the result
-    await redisClient.setEx(cacheKey, 3600, JSON.stringify(doc))
-
-    res.status(200).json({
+    // Step 5: Build the response
+    const response = {
         status: 'success',
         cached: false,
-        doc,
-    })
+        doc: vendor,
+    }
+
+    // Step 6: Cache the result
+    await redisClient.setEx(cacheKey, 3600, JSON.stringify(response))
+
+    // Step 7: Send the response
+    res.status(200).json(response)
 })
 
 export const getVendorBySlug = catchAsync(async (req, res, next) => {
@@ -424,39 +326,47 @@ export const getVendorBySlug = catchAsync(async (req, res, next) => {
         })
     }
 
-    // If not in cache, fetch from database
-    let vendor = await Vendor.findOne({ slug }).populate('products bank').lean()
+    // Step 1: Fetch the vendor based on the slug
+    const vendor = await Vendor.findOne({ slug }).lean()
 
     if (!vendor) {
         return next(new AppError(`No Vendor found with that slug`, 404))
     }
 
+    // Step 2: Fetch the product counts and order counts using aggregation pipeline
+    const [productCounts] = await Product.aggregate([
+        { $match: { userId: vendor._id } }, // Match products for the vendor
+        {
+            $facet: {
+                approvedCount: [
+                    { $match: { status: 'approved' } },
+                    { $count: 'approvedCount' },
+                ],
+                totalCount: [{ $count: 'totalCount' }],
+                orderCount: [
+                    { $unwind: '$orders' },
+                    { $match: { 'orders.userId': vendor._id } },
+                    { $count: 'orderCount' },
+                ],
+            },
+        },
+    ])
+
+    const approvedProducts =
+        productCounts?.approvedCount?.[0]?.approvedCount || 0
+    const totalProducts = productCounts?.totalCount?.[0]?.totalCount || 0
+    const totalOrders = productCounts?.orderCount?.[0]?.orderCount || 0
+
+    // Step 3: Fetch reviews for the vendor's products
     const reviews = await ProductReview.find({
         product: { $in: vendor.products },
     }).lean()
 
-    // Step 1: Fetch total products for the brand
-    const products = vendor.products
-
-    const totalProducts = products?.length || 0
-    let orders = []
-
-    if (products && products.length) {
-        // Extract product IDs from the products
-        const productIds = products.map((product) => product._id)
-
-        // Step 3: Fetch total orders that contain these products
-        orders = await Order.find({
-            products: { $in: productIds }, // Match orders that contain any of the product IDs
-        }).lean()
-    }
-
-    const totalOrders = orders.length || 0
-
+    // Step 4: Build the response data
     const doc = {
         ...vendor,
         reviews,
-        orders,
+        approvedProducts,
         totalProducts,
         totalOrders,
     }
