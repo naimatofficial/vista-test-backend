@@ -12,6 +12,7 @@ import {
     updateShopStatus,
     forgotVendorPassword,
     resetVendorPassword,
+    verifyVendorOTPViaEmail,
 } from '../../controllers/sellers/vendorController.js'
 import { validateSchema } from '../../middleware/validationMiddleware.js'
 import vendorValidationSchema from '../../validations/admin/sellers/vendorValidator.js'
@@ -24,6 +25,8 @@ const router = express.Router()
 router
     .route('/signup')
     .post(validateSchema(vendorValidationSchema), registerVendor)
+
+router.post('/otp/verify', verifyVendorOTPViaEmail)
 
 router.post('/login', loginVendor)
 router.post('/logout', protect, logout)

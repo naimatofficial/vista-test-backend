@@ -24,7 +24,9 @@ import {
 import { createSendToken } from '../authController.js'
 import { sendVendorApprovedEmail } from './../../services/vendorMailService.js'
 import sendEmail from '../../services/emailService.js'
-import mongoose from 'mongoose'
+
+import * as otpService from './../../services/otpService.js'
+import OTP from '../../models/users/otpModel.js'
 
 export const createVendor = catchAsync(async (req, res, next) => {
     const {
@@ -103,9 +105,58 @@ export const registerVendor = catchAsync(async (req, res, next) => {
     // delete all document caches related to this model
     await deleteKeysByPattern('Vendor')
 
+    // 2. Generate OTP and save it in the OTP model
+    const { token, hash } = otpService.generateOTP()
+    await otpService.saveOTP(email, null, hash)
+
+    // 3. Send OTP to email for verification
+    await otpService.otpEmailSend(email, token)
+
+    // 5. Respond with success message
     res.status(201).json({
         status: 'success',
-        doc,
+        message: 'Please verify your account using the OTP sent to your email.',
+    })
+})
+
+export const verifyVendorOTPViaEmail = catchAsync(async (req, res, next) => {
+    const { token, email } = req.body
+
+    // Fetch the latest OTP for this email
+    const otpEntry = await OTP.findOne({ email }).sort({ createdAt: -1 }).exec()
+
+    if (!otpEntry) {
+        return next(new AppError('No OTP found for this email', 404))
+    }
+
+    // Check if the OTP has expired
+    // 5-minute expiration
+    const isExpired = Date.now() - otpEntry.createdAt > 5 * 60 * 1000
+
+    if (isExpired) {
+        // Cleanup expired OTPs
+        await OTP.deleteMany({ email })
+
+        return next(new AppError('OTP has expired', 400))
+    }
+
+    // Validate OTP hash
+    const isValid = await otpService.validateOTP(token, otpEntry.hash)
+
+    if (!isValid) return next(new AppError('Invalid OTP provided', 400))
+
+    // OTP is valid; proceed with deletion and user verification
+    await OTP.deleteMany({ email })
+
+    await Vendor.findOneAndUpdate(
+        { email },
+        { verified: true },
+        { new: true }
+    ).exec()
+
+    res.status(200).json({
+        status: 'success',
+        message: 'OTP verified successfully.',
     })
 })
 

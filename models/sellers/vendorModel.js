@@ -117,6 +117,8 @@ const vendorSchema = new mongoose.Schema(
 //     },
 // })
 
+vendorSchema.index({ shopName: 'text' })
+
 vendorSchema.virtual('bank', {
     ref: 'VendorBank',
     localField: '_id',

@@ -95,13 +95,13 @@ export const otpEmailSend = catchAsync(async (email, otp) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🛒 Vista Mart OTP Verification</h1>
+            <h1>Vista Mart OTP Verification</h1>
           </div>
           <div class="content">
             <p>Dear Customer,</p>
             <p>Your One-Time Password (OTP) for Vista Mart is:</p>
             <div class="otp">${otp}</div>
-            <p>This code is valid for the next <strong>5 minutes</strong>. Please do not share it with anyone.</p>
+            <p>This code is valid for the next <strong>2 minutes</strong>. Please do not share it with anyone.</p>
             <p>Thank you for choosing Vista Mart!</p>
           </div>
           <div class="footer">
