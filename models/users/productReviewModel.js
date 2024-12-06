@@ -25,8 +25,8 @@ const productReviewSchema = new Schema(
         rating: {
             type: Number,
             required: [true, 'Please provide rating.'],
-            min: 1,
-            max: 5,
+            min: [0, 'Rating cannot be negative'],
+            max: [5, 'Rating cannot exceed 5'],
             set: (val) => (Math.round(val * 10) / 10).toFixed(1),
         },
         status: {

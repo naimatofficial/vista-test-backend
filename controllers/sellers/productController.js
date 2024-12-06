@@ -109,9 +109,21 @@ export const createProduct = catchAsync(async (req, res, next) => {
 
     await newProduct.save()
 
+    // Increment the vendor's totalProducts count
+    const vendor = await Vendor.findById(userId)
+
+    if (!vendor) {
+        return next(new AppError('Vendor not found!', 404))
+    }
+
+    vendor.totalProducts += 1
+
+    await vendor.save()
+
     // delete all document caches related to this model
     await deleteKeysByPattern('Product')
     await deleteKeysByPattern('Search')
+    await deleteKeysByPattern('Vendor')
 
     res.status(201).json({
         status: 'success',
@@ -283,6 +295,7 @@ export const updateProduct = catchAsync(async (req, res, next) => {
 
     await deleteKeysByPattern('Product')
     await deleteKeysByPattern('Search')
+    await deleteKeysByPattern('Vendor')
 
     res.status(200).json({
         status: 'success',

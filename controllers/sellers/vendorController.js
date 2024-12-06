@@ -143,9 +143,68 @@ export const updateVendor = catchAsync(async (req, res, next) => {
 })
 
 // Get all vendors
+// export const getAllVendors = catchAsync(async (req, res, next) => {
+//     const cacheKey = getCacheKey('Vendor', '', req.query)
+
+//     const cachedResults = await redisClient.get(cacheKey)
+//     if (cachedResults) {
+//         return res.status(200).json({
+//             ...JSON.parse(cachedResults),
+//             status: 'success',
+//             cached: true,
+//         })
+//     }
+
+//     // EXECUTE QUERY
+//     let query = Vendor.find().populate('products bank').lean()
+
+//     const features = new APIFeatures(query, req.query)
+//         .filter()
+//         .sort()
+//         .fieldsLimit()
+//         .paginate()
+
+//     const vendors = await features.query
+
+//     // Step 2: Create an array to hold the vendor data with reviews and orders
+//     const vendorsWithDetails = await Promise.all(
+//         vendors.map(async (vendor) => {
+//             // Step 3: Fetch reviews for the vendor's products from the external database
+//             const reviews = await ProductReview.find({
+//                 product: { $in: vendor.products }, // Assuming vendor.products contains product IDs
+//             }).lean()
+
+//             // Step 4: Fetch orders for the vendor's products from the external database
+//             const orders = await Order.find({
+//                 products: { $in: vendor.products }, // Assuming vendor.products contains product IDs
+//             }).lean()
+
+//             // Combine vendor, reviews, and orders into one object
+//             return {
+//                 ...vendor,
+//                 reviews,
+//                 orders,
+//                 totalProducts: vendor.products.length, // Total number of products
+//                 totalOrders: orders.length, // Total number of orders
+//             }
+//         })
+//     )
+
+//     // Cache the result
+//     await redisClient.setEx(cacheKey, 3600, JSON.stringify(vendorsWithDetails))
+
+//     res.status(200).json({
+//         status: 'success',
+//         cached: false,
+//         results: vendorsWithDetails.length,
+//         doc: vendorsWithDetails,
+//     })
+// })
+
 export const getAllVendors = catchAsync(async (req, res, next) => {
     const cacheKey = getCacheKey('Vendor', '', req.query)
 
+    // Step 1: Check cache for existing results
     const cachedResults = await redisClient.get(cacheKey)
     if (cachedResults) {
         return res.status(200).json({
@@ -155,50 +214,132 @@ export const getAllVendors = catchAsync(async (req, res, next) => {
         })
     }
 
-    // EXECUTE QUERY
-    let query = Vendor.find().populate('products bank').lean()
+    // Step 2: Extract query options
+    const { sort, limit = 100, page = 1, ...filters } = req.query
+    const skip = (page - 1) * limit
 
-    const features = new APIFeatures(query, req.query)
-        .filter()
-        .sort()
-        .fieldsLimit()
-        .paginate()
+    // Step 3: Build the aggregation pipeline
+    const pipeline = [
+        // Match filters
+        { $match: filters },
 
-    const vendors = await features.query
+        // Lookup and count approved products
+        {
+            $lookup: {
+                from: 'products',
+                let: { vendorId: '$_id' },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: { $eq: ['$userId', '$$vendorId'] },
+                            status: 'approved',
+                        },
+                    },
+                    { $count: 'approvedCount' },
+                ],
+                as: 'approvedProductsData',
+            },
+        },
 
-    // Step 2: Create an array to hold the vendor data with reviews and orders
-    const vendorsWithDetails = await Promise.all(
-        vendors.map(async (vendor) => {
-            // Step 3: Fetch reviews for the vendor's products from the external database
-            const reviews = await ProductReview.find({
-                product: { $in: vendor.products }, // Assuming vendor.products contains product IDs
-            }).lean()
+        // Lookup and count total products
+        {
+            $lookup: {
+                from: 'products',
+                let: { vendorId: '$_id' },
+                pipeline: [
+                    { $match: { $expr: { $eq: ['$userId', '$$vendorId'] } } },
+                    { $count: 'totalCount' },
+                ],
+                as: 'totalProductsData',
+            },
+        },
 
-            // Step 4: Fetch orders for the vendor's products from the external database
-            const orders = await Order.find({
-                products: { $in: vendor.products }, // Assuming vendor.products contains product IDs
-            }).lean()
+        // Lookup and count total orders
+        {
+            $lookup: {
+                from: 'orders',
+                let: { vendorId: '$_id' },
+                pipeline: [
+                    { $unwind: '$products' },
+                    {
+                        $match: {
+                            $expr: { $eq: ['$products.userId', '$$vendorId'] },
+                        },
+                    },
+                    { $count: 'orderCount' },
+                ],
+                as: 'totalOrdersData',
+            },
+        },
 
-            // Combine vendor, reviews, and orders into one object
-            return {
-                ...vendor,
-                reviews,
-                orders,
-                totalProducts: vendor.products.length, // Total number of products
-                totalOrders: orders.length, // Total number of orders
-            }
-        })
-    )
+        // Simplify fields and remove redundant arrays
+        {
+            $addFields: {
+                approvedProducts: {
+                    $ifNull: [
+                        {
+                            $arrayElemAt: [
+                                '$approvedProductsData.approvedCount',
+                                0,
+                            ],
+                        },
+                        0,
+                    ],
+                },
+                totalProducts: {
+                    $ifNull: [
+                        { $arrayElemAt: ['$totalProductsData.totalCount', 0] },
+                        0,
+                    ],
+                },
+                totalOrders: {
+                    $ifNull: [
+                        { $arrayElemAt: ['$totalOrdersData.orderCount', 0] },
+                        0,
+                    ],
+                },
+            },
+        },
 
-    // Cache the result
-    await redisClient.setEx(cacheKey, 3600, JSON.stringify(vendorsWithDetails))
+        // Remove unused fields
+        {
+            $project: {
+                approvedProductsData: 0,
+                totalProductsData: 0,
+                totalOrdersData: 0,
+            },
+        },
 
-    res.status(200).json({
+        // Add pagination stages if required
+        ...(page ? [{ $skip: (page - 1) * limit }] : []),
+        ...(limit ? [{ $limit: parseInt(limit, 10) }] : []),
+    ]
+
+    // Step 4: Execute the aggregation
+    const [doc, totalDocs] = await Promise.all([
+        Vendor.aggregate(pipeline),
+        Vendor.countDocuments(filters),
+    ])
+
+    // Step 5: Calculate pagination details
+    const totalPages = Math.ceil(totalDocs / limit)
+
+    // Step 6: Build the response
+    const response = {
         status: 'success',
         cached: false,
-        results: vendorsWithDetails.length,
-        doc: vendorsWithDetails,
-    })
+        totalDocs,
+        results: doc.length,
+        currentPage: Number(page),
+        totalPages,
+        doc,
+    }
+
+    // Step 7: Cache the result
+    await redisClient.setEx(cacheKey, 3600, JSON.stringify(response))
+
+    // Step 8: Send the response
+    res.status(200).json(response)
 })
 
 // Get vendor by ID
@@ -451,8 +592,6 @@ export const forgotVendorPassword = catchAsync(async (req, res, next) => {
     // 2) Generate the random reset token
     const resetToken = user.createPasswordResetToken()
     await user.save({ validateBeforeSave: false })
-
-    console.log(resetToken, user)
 
     // 3) Send it to user's email
     try {
