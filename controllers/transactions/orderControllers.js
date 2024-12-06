@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid'
+import * as crypto from 'crypto'
 
 import catchAsync from '../../utils/catchAsync.js'
 import redisClient from '../../config/redisConfig.js'
@@ -14,7 +14,10 @@ import AppError from '../../utils/appError.js'
 
 import { deleteKeysByPattern } from '../../services/redisService.js'
 import { deleteOne } from './../../factory/handleFactory.js'
-import { sendOrderEmail } from '../../services/orderMailServices.js'
+import {
+    sendOrderEmailToCustomer,
+    sendOrderEmailToVendor,
+} from '../../services/orderMailServices.js'
 
 const updateCouponUserLimit = catchAsync(async (_couponId, next) => {
     // Find the coupon by ID
@@ -35,17 +38,104 @@ const updateCouponUserLimit = catchAsync(async (_couponId, next) => {
 })
 
 function generateOrderId() {
-    // Generate a UUID
-    const uuid = uuidv4()
+    // Generate a 6-character alphanumeric string
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    const randomBytes = crypto.randomBytes(3) // Generate 3 bytes (24 bits)
 
-    // Convert it into a number by taking the first 6 characters of its hash
-    const orderId = parseInt(uuid.replace(/-/g, '').slice(0, 6), 16)
+    let orderId = ''
 
-    // Ensure it's exactly 6 digits by padding or trimming
-    return orderId.toString().padStart(6, '0').slice(0, 6)
+    // Convert each byte to a character in the characters string
+    for (let i = 0; i < 8; i++) {
+        const byte = randomBytes[i % 3] // Cycle through the 3 bytes
+        orderId += characters.charAt(byte % characters.length) // Map byte to character
+    }
+
+    return orderId
 }
 
 // Create a new order
+// export const createOrder = catchAsync(async (req, res, next) => {
+//     const {
+//         couponId,
+//         customerId,
+//         vendor,
+//         products,
+//         totalAmount,
+//         totalDiscount,
+//         totalQty,
+//         totalShippingCost,
+//         paymentMethod,
+//         shippingAddress,
+//         billingAddress,
+//         paymentStatus,
+//         orderNote,
+//     } = req.body
+
+//     if (couponId) {
+//         updateCouponUserLimit(couponId, next)
+//     }
+//     const newOrder = {
+//         orderId: generateOrderId(),
+//         coupon: couponId ? couponId : undefined,
+//         customer: customerId,
+//         vendor,
+//         products,
+//         totalAmount,
+//         totalDiscount,
+//         totalQty,
+//         totalShippingCost,
+//         paymentMethod,
+//         shippingAddress,
+//         billingAddress,
+//         paymentStatus,
+//         orderNote,
+//     }
+
+//     const doc = await Order.create(newOrder)
+
+//     if (!doc) {
+//         return next(new AppError(`Order could not be created`, 400))
+//     }
+
+//     // If the order status is 'delivered', increment the product sell count
+//     for (const item of doc?.products) {
+//         const { product, quantity } = item
+
+//         // Update sold count by the quantity sold and reduce the stock by the same quantity
+//         await Product.findByIdAndUpdate(
+//             product,
+//             {
+//                 $inc: {
+//                     stock: -quantity, // Decrement the stock by the quantity sold
+//                 },
+//             },
+//             { new: true }
+//         )
+
+//         await deleteKeysByPattern('Product')
+//     }
+
+//     // Send order confirmation email
+//     const customer = await Customer.findById(customerId).select(
+//         'firstName email'
+//     )
+//     const seller = await Vendor.findById(vendor).select(
+//         'email firstName lastName shopName'
+//     )
+
+//     // sendOrderEmail(customer.email, customer, doc._id)
+//     await sendOrderEmailToCustomer(customer, newOrder.orderId)
+//     await sendOrderEmailToVendor(seller, customer, newOrder.orderId)
+
+//     await deleteKeysByPattern('Order')
+//     await deleteKeysByPattern('Vendor')
+
+//     res.status(201).json({
+//         status: 'success',
+//         doc,
+//     })
+// })
+
 export const createOrder = catchAsync(async (req, res, next) => {
     const {
         couponId,
@@ -83,6 +173,38 @@ export const createOrder = catchAsync(async (req, res, next) => {
         orderNote,
     }
 
+    // Loop through the products and check stock availability
+    for (const item of products) {
+        const { product, quantity } = item
+        const productDoc = await Product.findById(product)
+
+        // Check if product exists and if stock is available
+        if (!productDoc) {
+            return next(
+                new AppError(`Product with ID ${product} not found`, 404)
+            )
+        }
+
+        if (productDoc.stock <= 0) {
+            return next(
+                new AppError(
+                    `Stock is not available for product ${productDoc.name}`,
+                    400
+                )
+            )
+        }
+
+        // Check if the requested quantity exceeds available stock
+        if (quantity > productDoc.stock) {
+            return next(
+                new AppError(
+                    `Stock is not available as you needed for product ${productDoc.name}`,
+                    400
+                )
+            )
+        }
+    }
+
     const doc = await Order.create(newOrder)
 
     if (!doc) {
@@ -107,144 +229,26 @@ export const createOrder = catchAsync(async (req, res, next) => {
         await deleteKeysByPattern('Product')
     }
 
-    await deleteKeysByPattern('Order')
-
     // Send order confirmation email
     const customer = await Customer.findById(customerId).select(
         'firstName email'
     )
-    console.log(customer)
+    const seller = await Vendor.findById(vendor).select(
+        'email firstName lastName shopName'
+    )
 
-    sendOrderEmail(customer.email, customer, doc._id)
+    // sendOrderEmail(customer.email, customer, doc._id)
+    await sendOrderEmailToCustomer(customer, newOrder.orderId)
+    await sendOrderEmailToVendor(seller, customer, newOrder.orderId)
 
-    console.log('Email send to cutomer')
+    await deleteKeysByPattern('Order')
+    await deleteKeysByPattern('Vendor')
 
     res.status(201).json({
         status: 'success',
         doc,
     })
 })
-
-// export const createOrder = catchAsync(async (req, res, next) => {
-//     const session = await mongoose.startSession()
-//     session.startTransaction()
-
-//     try {
-//         const {
-//             couponId,
-//             customerId,
-//             products,
-//             paymentMethod,
-//             shippingAddress,
-//             billingAddress,
-//             orderNote,
-//         } = req.body
-
-//         if (!customerId || !products || products.length === 0) {
-//             throw new AppError('Customer and products are required', 400)
-//         }
-
-//         // Step 1: Fetch all product details in a single query
-//         const productIds = products.map((item) => item.product)
-//         const productDetails = await Product.find({ _id: { $in: productIds } })
-//             .select('price userId')
-//             .lean()
-
-//         if (productDetails.length !== products.length) {
-//             throw new AppError(
-//                 'One or more products are invalid or unavailable',
-//                 404
-//             )
-//         }
-
-//         // Step 2: Group products by vendor
-//         const productsByVendor = {}
-//         for (const item of products) {
-//             const productDetail = productDetails.find(
-//                 (p) => p._id.toString() === item.product
-//             )
-
-//             if (!productDetail) {
-//                 throw new AppError(`Product ${item.product} not found`, 404)
-//             }
-
-//             const vendorId = productDetail.userId
-//             if (!productsByVendor[vendorId]) {
-//                 productsByVendor[vendorId] = []
-//             }
-
-//             productsByVendor[vendorId].push({
-//                 product: item.product,
-//                 price: productDetail.price,
-//                 quantity: item.quantity,
-//             })
-//         }
-
-//         // Step 3: Prepare and create orders in parallel
-//         const orderPromises = Object.entries(productsByVendor).map(
-//             async ([vendorId, vendorProducts]) => {
-//                 const totalAmount = vendorProducts.reduce(
-//                     (sum, { price, quantity }) => sum + price * quantity,
-//                     0
-//                 )
-
-//                 const newOrder = {
-//                     orderId: generateOrderId(),
-//                     coupon: couponId || undefined,
-//                     customer: customerId,
-//                     vendor: vendorId,
-//                     products: vendorProducts,
-//                     totalAmount,
-//                     paymentMethod,
-//                     shippingAddress,
-//                     billingAddress,
-//                     orderNote,
-//                 }
-
-//                 return Order.create([newOrder], { session })
-//             }
-//         )
-
-//         const createdOrders = await Promise.all(orderPromises)
-
-//         // Step 4: Update coupon usage (if applicable)
-//         if (couponId) {
-//             await updateCouponUserLimit(couponId, next)
-//         }
-
-//         // Step 5: Commit transaction and clear cache
-//         await session.commitTransaction()
-//         session.endSession()
-//         await deleteKeysByPattern('Order')
-
-//         // Step 6: Send emails asynchronously
-//         const customer = await Customer.findById(customerId).select(
-//             'firstName email'
-//         )
-//         if (customer) {
-//             createdOrders.flat().forEach(async (order) => {
-//                 try {
-//                     await sendOrderEmail(customer, order.orderId)
-//                 } catch (error) {
-//                     console.error(
-//                         `Failed to send email for order ${order.orderId}:`,
-//                         error
-//                     )
-//                 }
-//             })
-//         }
-
-//         // Respond with created orders
-//         res.status(201).json({
-//             status: 'success',
-//             data: createdOrders.flat(), // Flattened array of orders
-//         })
-//     } catch (error) {
-//         await session.abortTransaction()
-//         session.endSession()
-//         next(error)
-//     }
-// })
 
 // Get all orders
 export const getAllOrders = catchAsync(async (req, res, next) => {
@@ -306,56 +310,6 @@ export const getAllOrders = catchAsync(async (req, res, next) => {
 
 // Delete an order
 export const deleteOrder = deleteOne(Order)
-// Get order by ID
-// export const getOrderById = catchAsync(async (req, res, next) => {
-//     const { id } = req.params
-
-//     // Fetch the order by ID
-//     const order = await Order.findById(id).lean()
-
-//     if (!order) {
-//         return next(new AppError('No order found with that ID', 404))
-//     }
-
-//     // Fetch related data from the respective models
-//     const products = await Product.find({ _id: { $in: order.products } }).lean()
-//     const vendors = await Vendor.find({ _id: { $in: order.vendors } }).lean()
-//     const customer = await Customer.findById(order.customer).lean()
-
-//     // Map products and vendors by their IDs for efficient lookup
-//     const productsMap = products.reduce((map, product) => {
-//         map[product._id] = product
-//         return map
-//     }, {})
-
-//     const vendorsMap = vendors.reduce((map, vendor) => {
-//         map[vendor._id] = vendor
-//         return map
-//     }, {})
-
-//     // Map the products array to their corresponding product documents
-//     const orderProducts = order.products.map(
-//         (productId) => productsMap[productId] || null
-//     )
-
-//     // Map the vendors array to their corresponding vendor documents
-//     const orderVendors = order.vendors.map(
-//         (vendorId) => vendorsMap[vendorId] || null
-//     )
-
-//     // Add full details of customer, products, and vendors to the order
-//     const orderDetails = {
-//         ...order, // Spread the existing order fields
-//         customer, // Add the customer object
-//         products: orderProducts, // Add the full product objects
-//         vendors: orderVendors, // Add the full vendor objects
-//     }
-
-//     res.status(200).json({
-//         status: 'success',
-//         doc: orderDetails,
-//     })
-// })
 
 export const getOrderById = catchAsync(async (req, res, next) => {
     const { id } = req.params

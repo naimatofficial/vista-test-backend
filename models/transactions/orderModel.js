@@ -9,7 +9,8 @@ import Customer from '../users/customerModel.js'
 const orderSchema = new mongoose.Schema(
     {
         orderId: {
-            type: Number,
+            type: String,
+            unique: true,
         },
         customer: {
             type: mongoose.Schema.Types.ObjectId,

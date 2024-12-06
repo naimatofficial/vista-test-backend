@@ -1,14 +1,12 @@
-import keys from '../config/keys.js'
 import catchAsync from '../utils/catchAsync.js'
-import { emailTransporter } from '../utils/helpers.js'
 import sendEmail from './emailService.js'
 
-export const sendOrderEmail = catchAsync(async (email, customer, orderId) => {
-    const mailOptions = {
-        from: keys.emailAddress,
-        to: email,
-        subject: 'Your Order Has Been Placed',
-        html: `
+export const sendOrderEmailToCustomer = catchAsync(
+    async (customer, orderId) => {
+        const mailOptions = {
+            email: customer.email,
+            subject: 'Your Order Has Been Placed',
+            html: `
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -86,7 +84,7 @@ export const sendOrderEmail = catchAsync(async (email, customer, orderId) => {
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Order Confirmation</h1>
+                        <h1>Order Placed</h1>
                     </div>
                     <div class="content">
                         <p>Hello ${customer.firstName},</p>
@@ -103,15 +101,118 @@ export const sendOrderEmail = catchAsync(async (email, customer, orderId) => {
             </body>
             </html>
         `,
-    }
-
-    console.log({ mailOptions })
-
-    emailTransporter.sendMail(mailOptions, (err, info) => {
-        if (err) {
-            console.error('Error sending order email:', err)
-        } else {
-            console.log('Order email sent:', info.response)
         }
-    })
-})
+        await sendEmail(mailOptions)
+    }
+)
+
+export const sendOrderEmailToVendor = catchAsync(
+    async (vendor, customer, orderId) => {
+        const mailOptions = {
+            email: vendor.email,
+            subject: `New Order Received - `,
+            html: `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>New Order Confirmation</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        background-color: #f3f4f6;
+                        color: #333;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .container {
+                        max-width: 600px;
+                        margin: 20px auto;
+                        background-color: #ffffff;
+                        border-radius: 8px;
+                        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+                        overflow: hidden;
+                    }
+                    .header {
+                        background-color: #25851B;
+                        color: #ffffff;
+                        padding: 20px;
+                        text-align: center;
+                    }
+                    .header h1 {
+                        margin: 0;
+                        font-size: 24px;
+                    }
+                    .content {
+                        padding: 20px;
+                    }
+                    .content p {
+                        font-size: 16px;
+                        margin: 0 0 10px;
+                    }
+                    .order-id {
+                        font-weight: bold;
+                        color: #25851B;
+                    }
+                    .cta {
+                        display: inline-block;
+                        font-size: 16px;
+                        color: #ffffff !important;
+                        background-color: #25851B;
+                        padding: 10px 20px;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 10px;
+                        font-weight: bold;
+                    }
+                    .cta:hover {
+                        background-color: #1b5e13;
+                    }
+                    .footer {
+                        padding: 20px;
+                        text-align: center;
+                        font-size: 14px;
+                        color: #6b7280;
+                    }
+                    .footer a {
+                        color: #25851B;
+                        text-decoration: none;
+                    }
+                    .footer a:hover {
+                        text-decoration: underline;
+                    }
+                    .action {
+                        text-align: center;
+                        padding: 20px; 
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Your New Order Received</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hello ${vendor.firstName},</p>
+                        <p>You have received a new order from <strong>${customer.firstName}</strong>.</p>
+                        <p>Order ID: <span class="order-id">${orderId}</span></p>
+                        <div class="action">
+                            <a href="https://seller.vistamart.biz/pendingorders" class="cta">Go to Orders</a>
+                        </div>
+                        <p>Thank you for your attention!</p>
+                    </div>
+                    <div class="footer">
+                        <p>If you have any questions, feel free to <a href="mailto:support@vistamart.biz">contact us</a>.</p>
+                        <p>Best Regards,</p>
+                        <p>Vista Mart Team</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `,
+        }
+
+        await sendEmail(mailOptions)
+    }
+)
