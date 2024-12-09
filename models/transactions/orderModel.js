@@ -93,12 +93,7 @@ const orderSchema = new mongoose.Schema(
         },
         paymentMethod: {
             type: String,
-            enum: [
-                'cash_on_delivery',
-                'jazzCash',
-                'credit_card',
-                'bank_transfer',
-            ],
+            enum: ['COD', 'JazzCash', 'CreditCard'],
             required: true,
         },
         shippingAddress: {

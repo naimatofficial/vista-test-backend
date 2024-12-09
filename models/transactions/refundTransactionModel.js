@@ -15,8 +15,7 @@ const refundTransactionSchema = new mongoose.Schema(
             trim: true,
         },
         orderId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Order',
+            type: String,
             required: true,
         },
         shopName: {

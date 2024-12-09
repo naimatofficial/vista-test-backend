@@ -17,7 +17,7 @@ export const createSellerWallet = async (order, seller, commission) => {
             vendor: seller._id,
             totalCommissionGiven: commission,
             totalTaxGiven: order.totalTaxAmount,
-            pendingWithdraw: order.totalAmount,
+            pendingWithdraw: order.totalAmount - commission,
         }
 
         // Find the latest Seller Wallet and update commission atomically
