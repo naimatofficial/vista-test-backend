@@ -6,6 +6,7 @@ import catchAsync from '../utils/catchAsync.js'
 import { getCacheKey } from '../utils/helpers.js'
 import mongoose from 'mongoose'
 import { deleteKeysByPattern } from '../services/redisService.js'
+import Vendor from '../models/sellers/vendorModel.js'
 
 // Check Document fields if they exisit it return data body
 // And if not it return Error
@@ -431,6 +432,7 @@ export const updateStatus = (Model) =>
 
         // delete all document caches related to this model
         await deleteKeysByPattern(Model.modelName)
+
         if (Model.modelName !== 'Product') {
             await deleteKeysByPattern('Product')
         }

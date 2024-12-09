@@ -77,7 +77,9 @@ export const getCategories = catchAsync(async (req, res, next) => {
             const products = await Product.find({
                 category: category._id,
                 status: 'approved',
-            }).lean()
+            })
+                .select('_id')
+                .lean()
 
             const totalProducts = products?.length || 0
 
@@ -92,7 +94,6 @@ export const getCategories = catchAsync(async (req, res, next) => {
             // Step 4: Add products and totalOrders to the category object
             return {
                 ...category,
-                products, // Array of products in this category
                 totalOrders, // Total number of orders for these products
                 totalProducts,
             }
@@ -140,7 +141,9 @@ export const getCategoryById = catchAsync(async (req, res, next) => {
     const products = await Product.find({
         category: categoryId,
         status: 'approved',
-    }).lean()
+    })
+        .select('_id')
+        .lean()
 
     const totalProducts = products?.length || 0
 
@@ -154,7 +157,6 @@ export const getCategoryById = catchAsync(async (req, res, next) => {
 
     doc = {
         ...doc,
-        products,
         totalProducts,
         totalOrders,
     }
@@ -227,7 +229,9 @@ export const getCategoryBySlug = catchAsync(async (req, res, next) => {
     const products = await Product.find({
         category: categoryId,
         status: 'approved',
-    }).lean()
+    })
+        .select('_id')
+        .lean()
 
     const totalProducts = products?.length || 0
 
@@ -241,7 +245,6 @@ export const getCategoryBySlug = catchAsync(async (req, res, next) => {
 
     doc = {
         ...doc,
-        products,
         totalProducts,
         totalOrders,
     }

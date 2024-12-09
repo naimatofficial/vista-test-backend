@@ -18,6 +18,10 @@ import {
     sendOrderEmailToCustomer,
     sendOrderEmailToVendor,
 } from '../../services/orderMailServices.js'
+import { createTransaction } from './transactionController.js'
+import SellerBusiness from './../../models/admin/business/sellerBusinessModel.js'
+import { createAdminWallet } from './adminWalletController.js'
+import { createSellerWallet } from './sellerWalletController.js'
 
 const updateCouponUserLimit = catchAsync(async (_couponId, next) => {
     // Find the coupon by ID
@@ -53,89 +57,6 @@ function generateOrderId() {
     return orderId
 }
 
-// Create a new order
-// export const createOrder = catchAsync(async (req, res, next) => {
-//     const {
-//         couponId,
-//         customerId,
-//         vendor,
-//         products,
-//         totalAmount,
-//         totalDiscount,
-//         totalQty,
-//         totalShippingCost,
-//         paymentMethod,
-//         shippingAddress,
-//         billingAddress,
-//         paymentStatus,
-//         orderNote,
-//     } = req.body
-
-//     if (couponId) {
-//         updateCouponUserLimit(couponId, next)
-//     }
-//     const newOrder = {
-//         orderId: generateOrderId(),
-//         coupon: couponId ? couponId : undefined,
-//         customer: customerId,
-//         vendor,
-//         products,
-//         totalAmount,
-//         totalDiscount,
-//         totalQty,
-//         totalShippingCost,
-//         paymentMethod,
-//         shippingAddress,
-//         billingAddress,
-//         paymentStatus,
-//         orderNote,
-//     }
-
-//     const doc = await Order.create(newOrder)
-
-//     if (!doc) {
-//         return next(new AppError(`Order could not be created`, 400))
-//     }
-
-//     // If the order status is 'delivered', increment the product sell count
-//     for (const item of doc?.products) {
-//         const { product, quantity } = item
-
-//         // Update sold count by the quantity sold and reduce the stock by the same quantity
-//         await Product.findByIdAndUpdate(
-//             product,
-//             {
-//                 $inc: {
-//                     stock: -quantity, // Decrement the stock by the quantity sold
-//                 },
-//             },
-//             { new: true }
-//         )
-
-//         await deleteKeysByPattern('Product')
-//     }
-
-//     // Send order confirmation email
-//     const customer = await Customer.findById(customerId).select(
-//         'firstName email'
-//     )
-//     const seller = await Vendor.findById(vendor).select(
-//         'email firstName lastName shopName'
-//     )
-
-//     // sendOrderEmail(customer.email, customer, doc._id)
-//     await sendOrderEmailToCustomer(customer, newOrder.orderId)
-//     await sendOrderEmailToVendor(seller, customer, newOrder.orderId)
-
-//     await deleteKeysByPattern('Order')
-//     await deleteKeysByPattern('Vendor')
-
-//     res.status(201).json({
-//         status: 'success',
-//         doc,
-//     })
-// })
-
 export const createOrder = catchAsync(async (req, res, next) => {
     const {
         couponId,
@@ -156,6 +77,7 @@ export const createOrder = catchAsync(async (req, res, next) => {
     if (couponId) {
         updateCouponUserLimit(couponId, next)
     }
+
     const newOrder = {
         orderId: generateOrderId(),
         coupon: couponId ? couponId : undefined,
@@ -236,6 +158,20 @@ export const createOrder = catchAsync(async (req, res, next) => {
     const seller = await Vendor.findById(vendor).select(
         'email firstName lastName shopName'
     )
+
+    const bussiness = await SellerBusiness.findOne()
+        .sort({ createdAt: -1 })
+        .select('defaultCommission')
+        .lean()
+
+    const commission = orderAmount - bussiness.defaultCommission ?? 0
+
+    // Add Admin new wallet with specific sellerId
+    await createAdminWallet(totalAmount, seller, commission)
+
+    await createSellerWallet(totalAmount, seller, commission)
+
+    await createTransaction(newOrder, seller, customer)
 
     // sendOrderEmail(customer.email, customer, doc._id)
     await sendOrderEmailToCustomer(customer, newOrder.orderId)
@@ -444,14 +380,15 @@ export const getCustomerOrderById = catchAsync(async (req, res, next) => {
 
 // Update an order's status
 export const updateOrderStatus = catchAsync(async (req, res, next) => {
-    if (!req.body.status) {
+    const status = req.body.status
+    if (!status) {
         return next(new AppError(`Please provide status value.`, 400))
     }
 
     // Perform the update operation
     const doc = await Order.findByIdAndUpdate(
         req.params.id,
-        { status: req.body.status },
+        { status },
         {
             new: true,
             runValidators: true,
@@ -464,22 +401,30 @@ export const updateOrderStatus = catchAsync(async (req, res, next) => {
     }
 
     // If the order status is 'delivered', increment the product sell count
-    for (const item of doc?.products) {
-        const { product, quantity } = item
+    if (status === 'delivered') {
+        for (const item of doc?.products) {
+            const { product, quantity } = item
 
-        // Update sold count by the quantity sold and reduce the stock by the same quantity
-        await Product.findByIdAndUpdate(
-            product,
-            {
-                $inc: {
-                    sold: quantity, // Increment the sold count by the quantity sold
-                    // stock: -quantity, // Decrement the stock by the quantity sold
+            // Update sold count by the quantity sold and reduce the stock by the same quantity
+            await Product.findByIdAndUpdate(
+                product,
+                {
+                    $inc: {
+                        sold: quantity, // Increment the sold count by the quantity sold
+                        // stock: -quantity, // Decrement the stock by the quantity sold
+                    },
                 },
-            },
-            { new: true }
-        )
+                { new: true }
+            )
 
-        await deleteKeysByPattern('Product')
+            // Increment order count when creating an order
+            await Vendor.findByIdAndUpdate(doc.vendor, {
+                $inc: { totalOrders: 1 },
+            })
+
+            await await deleteKeysByPattern('Product')
+            await await deleteKeysByPattern('Vendor')
+        }
     }
 
     await deleteKeysByPattern('Order')

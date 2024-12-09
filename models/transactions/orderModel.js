@@ -79,6 +79,10 @@ const orderSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        totalTaxAmount: {
+            type: Number,
+            default: 0,
+        },
         totalQty: {
             type: Number,
             required: [true, 'Please provide total quantity.'],

@@ -7,7 +7,10 @@ import redisClient from '../config/redisConfig.js'
 import catchAsync from '../utils/catchAsync.js'
 import AppError from './../utils/appError.js'
 import { loginService } from '../services/authService.js'
-import { deleteKeysByPattern, removeRefreshToken } from '../services/redisService.js'
+import {
+    deleteKeysByPattern,
+    removeRefreshToken,
+} from '../services/redisService.js'
 
 import {
     createPasswordResetConfirmationMessage,
