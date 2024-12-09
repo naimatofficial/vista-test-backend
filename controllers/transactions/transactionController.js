@@ -4,20 +4,42 @@ import {
     getOne,
     updateOne,
     deleteOne,
-} from '../../factory/handleFactory.js';
-import Transaction from '../../models/transactions/transactionModel.js';
+} from '../../factory/handleFactory.js'
+import Transaction from '../../models/transactions/transactionModel.js'
+import catchAsync from '../../utils/catchAsync.js'
 
 // Create Transaction
-export const createTransaction = createOne(Transaction);
+export const createTransaction = catchAsync(async (order, seller, customer) => {
+    // Calculate amounts
+    // const sellerAmount =
+    //     order.totalAmount - order.totalDiscount - order.totalShippingCost // Exclude shipping costs
+    // const adminAmount = order.totalShippingCost // Admin earns from shipping fees
+
+    const transaction = {
+        orderId: order.orderId,
+        shopName: seller.shopName,
+        customerName: customer.firstName,
+        totalProductAmount: order.totalAmount,
+        couponDiscount: 0,
+        discountedAmount: order.totalDiscount,
+        shippingCharge: order.totalShippingCost,
+        orderAmount: order.totalAmount,
+        vatOrTax: order.totalTaxAmount,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus === 'Paid' ? 'Completed' : 'Pending',
+    }
+
+    await Transaction.create(transaction)
+})
 
 // Get All Transactions
-export const getTransactions = getAll(Transaction);
+export const getTransactions = getAll(Transaction)
 
 // Get Transaction by ID
-export const getTransactionById = getOne(Transaction);
+export const getTransactionById = getOne(Transaction)
 
 // Update Transaction
-export const updateTransaction = updateOne(Transaction);
+export const updateTransaction = updateOne(Transaction)
 
 // Delete Transaction
-export const deleteTransaction = deleteOne(Transaction);
+export const deleteTransaction = deleteOne(Transaction)

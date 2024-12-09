@@ -13,11 +13,7 @@ import { protect, restrictTo } from '../../../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-router
-    .route('/')
-    .post(protect, createSellerBusiness)
-
-    .get(getAllSellerBusiness)
+router.route('/').post(protect, createSellerBusiness).get(getAllSellerBusiness)
 
 router
     .route('/:id')

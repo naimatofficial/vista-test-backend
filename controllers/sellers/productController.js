@@ -118,9 +118,10 @@ export const createProduct = catchAsync(async (req, res, next) => {
         return next(new AppError('Vendor not found!', 404))
     }
 
-    vendor.totalProducts += 1
-
-    await vendor.save()
+    // Increment vendor products count when creating an product
+    await Vendor.findByIdAndUpdate(vendor, {
+        $inc: { totalProducts: 1 },
+    })
 
     // delete all document caches related to this model
     await deleteKeysByPattern('Product')
@@ -665,7 +666,45 @@ export const getProductBySlug = catchAsync(async (req, res, next) => {
 export const deleteProduct = deleteOne(Product)
 
 // Update product status
-export const updateProductStatus = updateStatus(Product)
+export const updateProductStatus = catchAsync(async (req, res, next) => {
+    const status = req.body.status
+    if (!status) {
+        return next(new AppError(`Please provide status value.`, 400))
+    }
+
+    // Perform the update operation
+    const doc = await Product.findByIdAndUpdate(
+        req.params.id,
+        { status },
+        {
+            new: true,
+            runValidators: true,
+        }
+    )
+
+    // Handle case where the document was not found
+    if (!doc) {
+        return next(new AppError(`No Product found with that ID`, 404))
+    }
+
+    // Increment approved count when product is approved
+    if (status === 'approved') {
+        await Vendor.findByIdAndUpdate(doc.userId, {
+            $inc: { approvedProducts: 1 },
+        })
+    }
+
+    // delete all document caches related to this model
+    await deleteKeysByPattern('Product')
+    await deleteKeysByPattern('Brand')
+    await deleteKeysByPattern('Category')
+    await deleteKeysByPattern('Vendor')
+
+    res.status(200).json({
+        status: 'success',
+        doc,
+    })
+})
 
 // Update product featured status
 export const updateProductFeaturedStatus = catchAsync(

@@ -24,10 +24,10 @@ const transactionSchema = new mongoose.Schema(
             required: [true, "'Total Product Amount' is required"],
             default: 0,
         },
-        productDiscount: {
-            type: Number,
-            default: 0,
-        },
+        // productDiscount: {
+        //     type: Number,
+        //     default: 0,
+        // },
         couponDiscount: {
             type: Number,
             default: 0,
@@ -62,9 +62,16 @@ const transactionSchema = new mongoose.Schema(
             trim: true,
             required: [true, "'Payment Method' is required"],
             enum: {
-                values: ['Cash', 'Digital', 'Wallet', 'Offline', 'credit_card'],
+                values: [
+                    'Cash',
+                    'Digital',
+                    'Wallet',
+                    'Offline',
+                    'credit_card',
+                    'JazzCash',
+                ],
                 message:
-                    "'Payment Method' must be either 'Cash', 'Digital', 'Wallet', 'Offline', or 'credit_card'",
+                    "'Payment Method' must be either 'Cash', 'JazzCash', 'Digital', 'Wallet', 'Offline',  or 'credit_card'",
             },
         },
         paymentStatus: {

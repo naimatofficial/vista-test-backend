@@ -73,6 +73,7 @@ const vendorSchema = new mongoose.Schema(
         },
         role: {
             type: String,
+            enum: ['vendor', 'in-house'],
             default: 'vendor',
         },
         shopRating: {
@@ -82,6 +83,18 @@ const vendorSchema = new mongoose.Schema(
             set: (val) => parseFloat((Math.round(val * 10) / 10).toFixed(1)),
         },
         totalReviews: {
+            type: Number,
+            default: 0,
+        },
+        totalOrders: {
+            type: Number,
+            default: 0,
+        },
+        totalProducts: {
+            type: Number,
+            default: 0,
+        },
+        approvedProducts: {
             type: Number,
             default: 0,
         },

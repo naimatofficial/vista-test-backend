@@ -49,7 +49,9 @@ export const getBrands = catchAsync(async (req, res, next) => {
             const products = await Product.find({
                 brand: brand._id,
                 status: 'approved',
-            }).lean()
+            })
+                .select('_id')
+                .lean()
 
             const totalProducts = products?.length || 0
 
@@ -64,7 +66,6 @@ export const getBrands = catchAsync(async (req, res, next) => {
             // Step 4: Add products and totalOrders to the brand object
             return {
                 ...brand,
-                products, // Array of products in this brand
                 totalOrders, // Total number of orders for these products
                 totalProducts,
             }
@@ -111,9 +112,11 @@ export const getBrandById = catchAsync(async (req, res, next) => {
 
     // Step 1: Fetch total products for the brand
     const products = await Product.find({
-        brand: brandId,
+        brand: brand._id,
         status: 'approved',
-    }).lean()
+    })
+        .select('_id')
+        .lean()
 
     const totalProducts = products?.length || 0
 
@@ -127,7 +130,6 @@ export const getBrandById = catchAsync(async (req, res, next) => {
 
     doc = {
         ...doc,
-        products,
         totalProducts,
         totalOrders,
     }
@@ -170,7 +172,9 @@ export const getBrandBySlug = catchAsync(async (req, res, next) => {
     const products = await Product.find({
         brand: brandId,
         status: 'approved',
-    }).lean()
+    })
+        .select('_id')
+        .lean()
 
     const totalProducts = products?.length || 0
 
@@ -184,7 +188,6 @@ export const getBrandBySlug = catchAsync(async (req, res, next) => {
 
     doc = {
         ...doc,
-        products,
         totalProducts,
         totalOrders,
     }
