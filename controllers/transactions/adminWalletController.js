@@ -109,9 +109,6 @@ export const getAdminWalletById = getOne(AdminWallet)
 export const updateAdminWalletById = updateOne(AdminWallet)
 export const deleteAdminWalletById = deleteOne(AdminWallet)
 
-import catchAsync from '../utils/catchAsync.js'
-import AdminWallet from '../models/adminWalletModel.js'
-
 export const calculateTotals = catchAsync(async (req, res, next) => {
     const aggregatedData = await AdminWallet.aggregate([
         {
