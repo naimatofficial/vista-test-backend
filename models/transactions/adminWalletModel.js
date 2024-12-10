@@ -37,4 +37,10 @@ const AdminWallet = transactionDbConnection.model(
     adminWalletSchema
 )
 
+AdminWallet.createIndexes({
+    commissionEarned: 1,
+    InhouseEarning: 1,
+    deliveryChargeEarned: 1,
+})
+
 export default AdminWallet
