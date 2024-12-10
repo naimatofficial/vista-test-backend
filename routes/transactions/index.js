@@ -5,6 +5,7 @@ import adminWalletRoutes from './adminWalletRoutes.js'
 import sellerWalletRoutes from './sellerWalletRoutes.js'
 import transactionRoutes from './transactionRoutes.js'
 import paymentRoutes from './paymentRoutes.js'
+import withdrawRoutes from './withdrawRoutes.js'
 
 const router = express.Router()
 
@@ -15,7 +16,9 @@ router.use('/payment', paymentRoutes)
 router.use('/seller-wallets', sellerWalletRoutes)
 router.use('/admin-wallets', adminWalletRoutes)
 
-router.use('/transaction', transactionRoutes)
+router.use('/transactions', transactionRoutes)
 router.use('/refunds', redundRoutes)
+
+router.use('/withdraws', withdrawRoutes)
 
 export default router

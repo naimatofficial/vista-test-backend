@@ -100,7 +100,6 @@ const vendorSchema = new mongoose.Schema(
         },
         slug: {
             type: String,
-            unique: true,
         },
         passwordChangedAt: Date,
         passwordResetToken: String,

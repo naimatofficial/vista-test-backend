@@ -5,38 +5,61 @@ import AppError from '../../utils/appError.js'
 import Vendor from '../../models/sellers/vendorModel.js'
 import { deleteKeysByPattern } from '../../services/redisService.js'
 import {
+    createOne,
     deleteOne,
     getAll,
     getOne,
     updateOne,
 } from '../../factory/handleFactory.js'
 
-export const createSellerWallet = async (order, seller, commission) => {
+export const createSellerWallet = createOne(SellerWallet)
+
+export const updateSellerWallet = async (order, seller, commission) => {
     try {
-        const pendingWithdraw =
-            order.totalAmount - commission - order.totalTaxAmount || 0
+        const totalAmount = Number(order.totalAmount) || 0
+        const totalTaxAmount = Number(order.totalTaxAmount) || 0
+        const shippingCost = Number(order.totalShippingCost) || 0
+        const commissionAmount = Number(commission) || 0
 
-        const newWallet = {
-            vendor: seller._id,
-            totalCommissionGiven: commission,
-            totalTaxGiven: order.totalTaxAmount,
-            pendingWithdraw,
-        }
+        const withdrawableBalance =
+            totalAmount - commissionAmount - totalTaxAmount
 
-        // Find the latest Seller Wallet and update commission atomically
-        const updatedWallet = await SellerWallet.create(newWallet)
-        // Handle case where no document exists
+        // Incremental update to existing wallet
+        const updatedWallet = await SellerWallet.findOneAndUpdate(
+            { vendor: seller._id },
+            {
+                $inc: {
+                    totalCommissionGiven: commissionAmount || 0,
+                    totalTaxGiven: totalTaxAmount || 0,
+                    withdrawableBalance: withdrawableBalance || 0,
+                    totalDeliveryChargeEarned: shippingCost || 0,
+                },
+            },
+            {
+                new: true,
+                upsert: true, // Create a new wallet if it doesn't exist
+                runValidators: true,
+            }
+        )
+
         if (!updatedWallet) {
-            return `Seller Wallet is not created.`
+            return `Failed to create or update Seller Wallet.`
         }
 
-        // Clear cache related to AdminWallet
+        // Clear cache if caching is implemented
         await deleteKeysByPattern('SellerWallet')
 
-        return true // Return success
+        return {
+            success: true,
+            message: 'Seller wallet updated successfully.',
+            wallet: updatedWallet,
+        }
     } catch (error) {
-        console.error('Error updating Seller Wallet commission:', error.message)
-        return `Failed to update Seller Wallet: ${error.message}`
+        console.error('Error updating Seller Wallet:', error.message)
+        return {
+            success: false,
+            message: `Failed to update Seller Wallet: ${error.message}`,
+        }
     }
 }
 

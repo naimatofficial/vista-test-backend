@@ -21,7 +21,7 @@ import {
 import { createTransaction } from './transactionController.js'
 import SellerBusiness from './../../models/admin/business/sellerBusinessModel.js'
 import { createAdminWallet } from './adminWalletController.js'
-import { createSellerWallet } from './sellerWalletController.js'
+import { updateSellerWallet } from './sellerWalletController.js'
 
 const updateCouponUserLimit = catchAsync(async (_couponId, next) => {
     // Find the coupon by ID
@@ -70,6 +70,7 @@ export const createOrder = catchAsync(async (req, res, next) => {
         totalDiscount,
         totalQty,
         totalShippingCost,
+        totalTaxAmount,
         paymentMethod,
         shippingAddress,
         billingAddress,
@@ -77,13 +78,15 @@ export const createOrder = catchAsync(async (req, res, next) => {
         orderNote,
     } = req.body
 
-    if (couponId) {
-        updateCouponUserLimit(couponId, next)
+    // Validate essential fields
+    if (!customerId || !vendor || !products || products.length === 0) {
+        return next(new AppError('Missing required fields.', 400))
     }
 
+    // Prepare the order object
     const newOrder = {
         orderId: generateOrderId(),
-        coupon: couponId ? couponId : undefined,
+        coupon: couponId || undefined,
         customer: customerId,
         vendor,
         products,
@@ -91,6 +94,7 @@ export const createOrder = catchAsync(async (req, res, next) => {
         totalDiscount,
         totalQty,
         totalShippingCost,
+        totalTaxAmount,
         paymentMethod,
         shippingAddress,
         billingAddress,
@@ -98,99 +102,228 @@ export const createOrder = catchAsync(async (req, res, next) => {
         orderNote,
     }
 
-    // Loop through the products and check stock availability
-    for (const item of products) {
-        const { product, quantity } = item
-        const productDoc = await Product.findById(product)
-
-        // Check if product exists and if stock is available
-        if (!productDoc) {
-            return next(
-                new AppError(`Product with ID ${product} not found`, 404)
-            )
-        }
-
-        if (productDoc.stock <= 0) {
-            return next(
-                new AppError(
-                    `Stock is not available for product ${productDoc.name}`,
-                    400
-                )
-            )
-        }
-
-        // Check if the requested quantity exceeds available stock
-        if (quantity > productDoc.stock) {
-            return next(
-                new AppError(
-                    `Stock is not available as you needed for product ${productDoc.name}`,
-                    400
-                )
-            )
-        }
+    // Handle coupon usage (async for scalability)
+    if (couponId) {
+        updateCouponUserLimit(couponId, next)
     }
 
-    const doc = await Order.create(newOrder)
+    // Check stock availability for all products (batch process for efficiency)
+    const productIds = products.map((item) => item.product)
+    const productDocs = await Product.find({ _id: { $in: productIds } })
 
-    if (!doc) {
-        return next(new AppError(`Order could not be created`, 400))
-    }
+    const stockIssues = products.filter((item) => {
+        const product = productDocs.find((doc) => doc._id.equals(item.product))
+        if (!product || product.stock <= 0 || item.quantity > product.stock) {
+            return true
+        }
+        return false
+    })
 
-    // If the order status is 'delivered', increment the product sell count
-    for (const item of doc?.products) {
-        const { product, quantity } = item
-
-        // Update sold count by the quantity sold and reduce the stock by the same quantity
-        await Product.findByIdAndUpdate(
-            product,
-            {
-                $inc: {
-                    stock: -quantity, // Decrement the stock by the quantity sold
-                },
-            },
-            { new: true }
+    if (stockIssues.length > 0) {
+        return next(
+            new AppError(
+                `Stock issues with the following products: ${stockIssues
+                    .map((item) => item.product)
+                    .join(', ')}`,
+                400
+            )
         )
-
-        await deleteKeysByPattern('Product')
     }
 
-    // Send order confirmation email
-    const customer = await Customer.findById(customerId).select(
-        'firstName email'
-    )
-    const seller = await Vendor.findById(vendor).select(
-        'email firstName lastName shopName'
-    )
+    // Create the order
+    const doc = await Order.create(newOrder)
+    if (!doc) {
+        return next(new AppError('Order could not be created.', 400))
+    }
 
-    const bussiness = await SellerBusiness.findOne()
-        .sort({ createdAt: -1 })
-        .select('defaultCommission')
-        .lean()
+    // Update stock and clear cache for affected products (batch operation)
+    const bulkStockUpdate = products.map((item) => ({
+        updateOne: {
+            filter: { _id: item.product },
+            update: { $inc: { stock: -item.quantity } },
+        },
+    }))
 
-    // Calculate the commission amount
-    const commission = (totalAmount * bussiness.defaultCommission) / 100
+    await Product.bulkWrite(bulkStockUpdate)
+    await deleteKeysByPattern('Product')
 
-    console.log(commission)
+    // Send order confirmation emails
+    const [customer, seller, business] = await Promise.all([
+        Customer.findById(customerId).select('firstName email'),
+        Vendor.findById(vendor).select('email firstName lastName shopName'),
+        SellerBusiness.findOne()
+            .sort({ createdAt: -1 })
+            .select('defaultCommission')
+            .lean(),
+    ])
 
-    // Add Admin new wallet with specific sellerId
-    await createAdminWallet(totalAmount, seller, commission)
+    if (!customer || !seller || !business) {
+        return next(
+            new AppError(
+                'Customer, Vendor, or Business details not found.',
+                404
+            )
+        )
+    }
 
-    await createSellerWallet(totalAmount, seller, commission)
+    // Calculate commission and update wallets/transactions
+    const commission = (totalAmount * business.defaultCommission) / 100
+    await Promise.all([
+        createAdminWallet(newOrder, seller, commission),
+        updateSellerWallet(newOrder, seller, commission),
+        createTransaction(newOrder, seller, customer),
+    ])
 
-    await createTransaction(newOrder, seller, customer)
+    // Send notifications
+    await Promise.all([
+        sendOrderEmailToCustomer(customer, newOrder.orderId),
+        sendOrderEmailToVendor(seller, customer, newOrder.orderId),
+    ])
 
-    // sendOrderEmail(customer.email, customer, doc._id)
-    await sendOrderEmailToCustomer(customer, newOrder.orderId)
-    await sendOrderEmailToVendor(seller, customer, newOrder.orderId)
+    // Clear relevant caches
+    await Promise.all([
+        deleteKeysByPattern('Order'),
+        deleteKeysByPattern('Vendor'),
+    ])
 
-    await deleteKeysByPattern('Order')
-    await deleteKeysByPattern('Vendor')
-
+    // Respond with success
     res.status(201).json({
         status: 'success',
         doc,
     })
 })
+
+// export const createOrder = catchAsync(async (req, res, next) => {
+//     const {
+//         couponId,
+//         customerId,
+//         vendor,
+//         products,
+//         totalAmount,
+//         totalDiscount,
+//         totalQty,
+//         totalShippingCost,
+//         paymentMethod,
+//         shippingAddress,
+//         billingAddress,
+//         paymentStatus,
+//         orderNote,
+//     } = req.body
+
+//     if (couponId) {
+//         updateCouponUserLimit(couponId, next)
+//     }
+
+//     const newOrder = {
+//         orderId: generateOrderId(),
+//         coupon: couponId ? couponId : undefined,
+//         customer: customerId,
+//         vendor,
+//         products,
+//         totalAmount,
+//         totalDiscount,
+//         totalQty,
+//         totalShippingCost,
+//         paymentMethod,
+//         shippingAddress,
+//         billingAddress,
+//         paymentStatus,
+//         orderNote,
+//     }
+
+//     // Loop through the products and check stock availability
+//     for (const item of products) {
+//         const { product, quantity } = item
+//         const productDoc = await Product.findById(product)
+
+//         // Check if product exists and if stock is available
+//         if (!productDoc) {
+//             return next(
+//                 new AppError(`Product with ID ${product} not found`, 404)
+//             )
+//         }
+
+//         if (productDoc.stock <= 0) {
+//             return next(
+//                 new AppError(
+//                     `Stock is not available for product ${productDoc.name}`,
+//                     400
+//                 )
+//             )
+//         }
+
+//         // Check if the requested quantity exceeds available stock
+//         if (quantity > productDoc.stock) {
+//             return next(
+//                 new AppError(
+//                     `Stock is not available as you needed for product ${productDoc.name}`,
+//                     400
+//                 )
+//             )
+//         }
+//     }
+
+//     const doc = await Order.create(newOrder)
+
+//     if (!doc) {
+//         return next(new AppError(`Order could not be created`, 400))
+//     }
+
+//     // If the order status is 'delivered', increment the product sell count
+//     for (const item of doc?.products) {
+//         const { product, quantity } = item
+
+//         // Update sold count by the quantity sold and reduce the stock by the same quantity
+//         await Product.findByIdAndUpdate(
+//             product,
+//             {
+//                 $inc: {
+//                     stock: -quantity, // Decrement the stock by the quantity sold
+//                 },
+//             },
+//             { new: true }
+//         )
+
+//         await deleteKeysByPattern('Product')
+//     }
+
+//     // Send order confirmation email
+//     const customer = await Customer.findById(customerId).select(
+//         'firstName email'
+//     )
+//     const seller = await Vendor.findById(vendor).select(
+//         'email firstName lastName shopName'
+//     )
+
+//     const bussiness = await SellerBusiness.findOne()
+//         .sort({ createdAt: -1 })
+//         .select('defaultCommission')
+//         .lean()
+
+//     // Calculate the commission amount
+//     const commission = (totalAmount * bussiness.defaultCommission) / 100
+
+//     console.log(commission)
+
+//     // Add Admin new wallet with specific sellerId
+//     await createAdminWallet(newOrder, seller, commission)
+
+//     await updateSellerWallet(newOrder, seller, commission)
+
+//     await createTransaction(newOrder, seller, customer)
+
+//     // sendOrderEmail(customer.email, customer, doc._id)
+//     await sendOrderEmailToCustomer(customer, newOrder.orderId)
+//     await sendOrderEmailToVendor(seller, customer, newOrder.orderId)
+
+//     await deleteKeysByPattern('Order')
+//     await deleteKeysByPattern('Vendor')
+
+//     res.status(201).json({
+//         status: 'success',
+//         doc,
+//     })
+// })
 
 // Get all orders
 export const getAllOrders = catchAsync(async (req, res, next) => {

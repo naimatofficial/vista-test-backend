@@ -1,5 +1,6 @@
 import express from 'express'
 import {
+    calculateAdminWallet,
     deleteAdminWalletById,
     getAdminWalletById,
     getAdminWallets,
@@ -10,7 +11,7 @@ import { restrictTo } from '../../middleware/authMiddleware.js'
 const router = express.Router()
 
 // Route to calculate and retrieve admin wallet data
-// router.get('/', protect, calculateAdminWallet)
+router.get('/calculate', protect, calculateAdminWallet)
 
 router.route('/').get(protect, getAdminWallets)
 

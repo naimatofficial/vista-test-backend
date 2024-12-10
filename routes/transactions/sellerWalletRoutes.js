@@ -1,5 +1,6 @@
 import express from 'express'
 import {
+    createSellerWallet,
     deleteSellerWalletById,
     getSellerWalletById,
     getSellerWallets,
@@ -12,7 +13,10 @@ const router = express.Router()
 
 // router.get('/calculate', protect, calculateSellerWallet)
 
-router.route('/').get(protect, getSellerWallets)
+router
+    .route('/')
+    .post(protect, createSellerWallet)
+    .get(protect, getSellerWallets)
 
 router
     .route('/:id')

@@ -77,13 +77,16 @@ export const getBusinessAnalytics = catchAsync(async (req, res, next) => {
 
 export const createAdminWallet = async (order, seller, commission) => {
     try {
+        const commissionAmount = Number(commission) || 0
+
         const newWallet = {
             vendor: seller._id,
             InhouseEarning: seller.role === 'in-house' ? order.totalAmount : 0,
-            commissionEarned: commission,
-            pendingAmount: order.totalAmount,
+            commissionEarned: commissionAmount,
+            pendingAmount: order.totalAmount - commissionAmount,
             totalTaxCollected: order.totalTaxAmount,
-            deliveryChargeEarned: 0,
+            deliveryChargeEarned:
+                seller.role === 'in-house' ? order.totalShippingCost : 0,
         }
 
         // Find the latest Admin Wallet and update commission atomically
@@ -109,7 +112,7 @@ export const getAdminWalletById = getOne(AdminWallet)
 export const updateAdminWalletById = updateOne(AdminWallet)
 export const deleteAdminWalletById = deleteOne(AdminWallet)
 
-export const calculateTotals = catchAsync(async (req, res, next) => {
+export const calculateAdminWallet = catchAsync(async (req, res, next) => {
     const aggregatedData = await AdminWallet.aggregate([
         {
             $group: {
