@@ -4,10 +4,9 @@ import { transactionDbConnection } from '../../config/dbConnections.js'
 const transactionSchema = new mongoose.Schema(
     {
         orderId: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: [true, "'Order ID' is required"],
+            type: String,
+            required: [true, 'Order id is required'],
             unique: true,
-            ref: 'Order',
         },
         shopName: {
             type: String,
@@ -19,11 +18,11 @@ const transactionSchema = new mongoose.Schema(
             required: [true, "'Customer Name' is required"],
             trim: true,
         },
-        totalProductAmount: {
-            type: Number,
-            required: [true, "'Total Product Amount' is required"],
-            default: 0,
-        },
+        // totalProductAmount: {
+        //     type: Number,
+        //     required: [true, "'Total Product Amount' is required"],
+        //     default: 0,
+        // },
         // productDiscount: {
         //     type: Number,
         //     default: 0,
@@ -63,15 +62,15 @@ const transactionSchema = new mongoose.Schema(
             required: [true, "'Payment Method' is required"],
             enum: {
                 values: [
-                    'Cash',
+                    'COD',
                     'Digital',
                     'Wallet',
                     'Offline',
-                    'credit_card',
+                    'CreditCard',
                     'JazzCash',
                 ],
                 message:
-                    "'Payment Method' must be either 'Cash', 'JazzCash', 'Digital', 'Wallet', 'Offline',  or 'credit_card'",
+                    "'Payment Method' must be either 'COD', 'JazzCash', 'Digital', 'Wallet', 'Offline',  or 'CeditCard'",
             },
         },
         paymentStatus: {

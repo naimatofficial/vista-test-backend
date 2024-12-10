@@ -42,16 +42,19 @@ const updateCouponUserLimit = catchAsync(async (_couponId, next) => {
 })
 
 function generateOrderId() {
-    // Generate a 6-character alphanumeric string
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-    const randomBytes = crypto.randomBytes(3) // Generate 3 bytes (24 bits)
-
+    // Define the character set for alphanumeric order IDs
+    const characters =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    const length = 8 // Desired length of the order ID
     let orderId = ''
 
-    // Convert each byte to a character in the characters string
-    for (let i = 0; i < 8; i++) {
-        const byte = randomBytes[i % 3] // Cycle through the 3 bytes
-        orderId += characters.charAt(byte % characters.length) // Map byte to character
+    // Generate secure random bytes
+    const randomBytes = crypto.randomBytes(length)
+
+    // Map each random byte to a character in the character set
+    for (let i = 0; i < length; i++) {
+        const randomIndex = randomBytes[i] % characters.length // Use modulo to map to character set
+        orderId += characters[randomIndex]
     }
 
     return orderId
@@ -164,7 +167,10 @@ export const createOrder = catchAsync(async (req, res, next) => {
         .select('defaultCommission')
         .lean()
 
-    const commission = orderAmount - bussiness.defaultCommission ?? 0
+    // Calculate the commission amount
+    const commission = (totalAmount * bussiness.defaultCommission) / 100
+
+    console.log(commission)
 
     // Add Admin new wallet with specific sellerId
     await createAdminWallet(totalAmount, seller, commission)

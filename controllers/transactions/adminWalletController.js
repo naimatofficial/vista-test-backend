@@ -81,7 +81,6 @@ export const createAdminWallet = async (order, seller, commission) => {
             vendor: seller._id,
             InhouseEarning: seller.role === 'in-house' ? order.totalAmount : 0,
             commissionEarned: commission,
-            totalTaxCollected: 0,
             pendingAmount: order.totalAmount,
             totalTaxCollected: order.totalTaxAmount,
             deliveryChargeEarned: 0,
@@ -109,6 +108,44 @@ export const getAdminWalletById = getOne(AdminWallet)
 
 export const updateAdminWalletById = updateOne(AdminWallet)
 export const deleteAdminWalletById = deleteOne(AdminWallet)
+
+import catchAsync from '../utils/catchAsync.js'
+import AdminWallet from '../models/adminWalletModel.js'
+
+export const calculateTotals = catchAsync(async (req, res, next) => {
+    const aggregatedData = await AdminWallet.aggregate([
+        {
+            $group: {
+                _id: null,
+                totalInhouseEarning: { $sum: { $toDouble: '$InhouseEarning' } },
+                totalCommissionEarned: {
+                    $sum: { $toDouble: '$commissionEarned' },
+                },
+                totalDeliveryChargeEarned: {
+                    $sum: { $toDouble: '$deliveryChargeEarned' },
+                },
+                totalTaxCollected: {
+                    $sum: { $toDouble: '$totalTaxCollected' },
+                },
+                totalPendingAmount: { $sum: { $toDouble: '$pendingAmount' } },
+            },
+        },
+        { $project: { _id: 0 } }, // Exclude the _id field from the response
+    ])
+
+    const response = aggregatedData[0] || {
+        totalInhouseEarning: 0,
+        totalCommissionEarned: 0,
+        totalDeliveryChargeEarned: 0,
+        totalTaxCollected: 0,
+        totalPendingAmount: 0,
+    }
+
+    res.status(200).json({
+        status: 'success',
+        totals: response,
+    })
+})
 
 // export const getTopCustomersProductsAndVendors = catchAsync(
 //     async (req, res, next) => {

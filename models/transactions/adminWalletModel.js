@@ -4,23 +4,23 @@ import { transactionDbConnection } from '../../config/dbConnections.js'
 const adminWalletSchema = new mongoose.Schema(
     {
         InhouseEarning: {
-            type: String,
+            type: Number,
             default: 0,
         },
         commissionEarned: {
-            type: String,
+            type: Number,
             default: 0,
         },
         deliveryChargeEarned: {
-            type: String,
+            type: Number,
             default: 0,
         },
         totalTaxCollected: {
-            type: String,
+            type: Number,
             default: 0,
         },
         pendingAmount: {
-            type: String,
+            type: Number,
             default: 0,
         },
         vendor: {
@@ -36,5 +36,11 @@ const AdminWallet = transactionDbConnection.model(
     'AdminWallet',
     adminWalletSchema
 )
+
+AdminWallet.createIndexes({
+    commissionEarned: 1,
+    InhouseEarning: 1,
+    deliveryChargeEarned: 1,
+})
 
 export default AdminWallet
