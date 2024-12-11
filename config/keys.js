@@ -32,6 +32,11 @@ const keys = {
     emailAddress: process.env.EMAIL_ADDRESS,
     emailPassKey: process.env.EMAIL_PASS_KEY,
 
+    // Sms Configuration keys
+    lifetimeSMSToken: process.env.SMS_TOKEN,
+    lifetimeSMSSecret: process.env.SMS_SECRET,
+
+    
     // Twilio Configuration keys
     twilioAccountSID: process.env.TWILIO_ACCOUNT_SID,
     twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
@@ -39,6 +44,7 @@ const keys = {
 
     otpSecretKey: process.env.OTP_SECRET_KEY,
 
+    
     // JazzCash Configuration Keys
 
     jazzCashMerchantId: process.env.JAZZCASH_MERCHANT_ID,

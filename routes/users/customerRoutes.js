@@ -2,10 +2,13 @@ import express from 'express'
 import {
     createCustomer,
     deleteCustomer,
+    forgotPasswordViaSMS,
     getCustomer,
     getCustomers,
+    resetPasswordViaSMSOTP,
     updateCustomer,
     updateCustomerStatus,
+    validateOTPHandler,
 } from './../../controllers/users/customerController.js'
 import {
     logout,
@@ -41,6 +44,10 @@ router.post('/logout', protect, logout)
 router.put('/update-password', protect, updatePassword)
 router.post('/forgot-password', forgotPassword)
 router.put('/reset-password/:token', resetPassword)
+// on sms
+router.post('/forgot-password-on-sms', forgotPasswordViaSMS)
+router.put('/reset-password-on-sms', resetPasswordViaSMSOTP)
+router.post('/validate-otp', validateOTPHandler);  // For OTP validation
 
 router
     .route('/')

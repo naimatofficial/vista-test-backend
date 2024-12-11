@@ -134,10 +134,10 @@ export const verifyVendorOTPViaEmail = catchAsync(async (req, res, next) => {
     const isExpired = Date.now() - otpEntry.createdAt > 5 * 60 * 1000
 
     if (isExpired) {
-        // Cleanup expired OTPs
-        await OTP.deleteMany({ email })
 
+        await OTP.deleteMany({ email })
         return next(new AppError('OTP has expired', 400))
+
     }
 
     // Validate OTP hash
@@ -159,6 +159,7 @@ export const verifyVendorOTPViaEmail = catchAsync(async (req, res, next) => {
         message: 'OTP verified successfully.',
     })
 })
+
 
 //update the slug on the basis of shop name
 export const updateVendor = catchAsync(async (req, res, next) => {
@@ -540,6 +541,7 @@ export const updateVendorPassword = catchAsync(async (req, res, next) => {
     createSendToken(user, 200, res)
 })
 
+// forgot password via email
 export const forgotVendorPassword = catchAsync(async (req, res, next) => {
     // 1) Get user based on posted email
     const email = req.body.email
@@ -659,3 +661,83 @@ export const resetVendorPassword = catchAsync(async (req, res, next) => {
         message: 'Password reset successfully.',
     })
 })
+
+
+
+export const forgotPasswordViaSMS = catchAsync(async (req, res, next) => {
+    const { phone } = req.body;
+
+    const vendor = await Vendor.findOne({ phoneNumber:phone });
+    if (!vendor) {
+        return next(new AppError('Vendor with this phone number not found', 404));
+    }
+
+    // Generate and save OTP
+    const { token, hash } = otpService.generateOTP();
+    await otpService.saveOTP(null,phone, hash);
+
+    // Send OTP via SMS
+    await otpService.otpSMSSend(phone, token);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'OTP sent to your registered phone number.',
+    });
+});
+
+export const resetVendorPasswordViaOTP = catchAsync(async (req, res, next) => {
+    const { phone, otp, passwordNew, passwordConfirm } = req.body;
+    if (passwordNew !== passwordConfirm) {
+        return next(new AppError('Passwords do not match!', 400));
+    }
+const otpEntry = await OTP.findOne({ phone });
+
+if (!otpEntry) {
+    return next(new AppError('Invalid or expired OTP', 400));
+}
+    const isValidOTP = await otpService.validateOTP(otp, otpEntry.hash);
+    if (!isValidOTP) {
+        return next(new AppError('Invalid or expired OTP', 400));
+    }
+
+    // 3) Find the vendor
+    const vendor = await Vendor.findOne({ phoneNumber :phone});
+    if (!vendor) {
+        return next(new AppError('Vendor with this phone number not found', 404));
+    }
+
+    // 4) Update the vendor's password
+    vendor.password = passwordNew;
+    vendor.passwordChangedAt = Date.now();
+    await vendor.save();
+    res.status(200).json({
+        status: 'success',
+        message: 'Password reset successfully.',
+    });
+});
+
+export const validateOTPHandler = catchAsync(async (req, res, next) => {
+    const { phone, otp } = req.body;
+    
+    // Retrieve the OTP entry for the user
+    const otpEntry = await OTP.findOne({ phone });
+    
+    if (!otpEntry) {
+        return next(new AppError('OTP not found or expired!', 400));
+    }
+
+    // Validate OTP
+    const isValidOTP = await otpService.validateOTP(otp, otpEntry.hash);
+    console.log("is valid otp ", isValidOTP)
+    if (!isValidOTP) {
+        return next(new AppError('Invalid or expired OTP', 400));
+    }
+
+    // If OTP is valid, proceed with sending the success response and show password fields
+    res.status(200).json({
+        status: 'success',
+        message: 'OTP validated successfully. You can now reset your password.',
+    });
+});
+
+

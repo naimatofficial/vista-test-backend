@@ -1,6 +1,8 @@
 import speakeasy from 'speakeasy'
 import twilio from 'twilio'
 import crypto from 'crypto'
+import axios from 'axios';
+
 
 import catchAsync from '../utils/catchAsync.js'
 import OTP from '../models/users/otpModel.js'
@@ -122,13 +124,55 @@ export const otpEmailSend = catchAsync(async (email, otp) => {
 })
 
 // Send OTP via SMS
-export const sendSMS = catchAsync(async (phone, otp) => {
-    return client.messages.create({
-        messagingServiceSid: keys.twilioAccountSID,
-        to: phone,
-        body: `Dear Customer, your OTP code for Vistamart is: ${otp}. It is valid for 5 minutes.`,
-    })
-})
+// export const sendSMS = catchAsync(async (phone, otp) => {
+//     return client.messages.create({
+//         messagingServiceSid: keys.twilioAccountSID,
+//         to: phone,
+        
+//         body: `Dear Customer, your OTP code for Vistamart is: ${otp}. It is valid for 5 minutes.`,
+//     })
+// })
+
+
+
+
+export const otpSMSSend = catchAsync(async (phone, otp) => {
+  console.log("OTP generated:", otp);
+  
+  // Normalize phone number to remove leading "+" if it exists
+  if (phone.startsWith('+92')) {
+    phone = phone.replace('+92', '92');
+  }
+  const payload = {
+      api_token: keys.lifetimeSMSToken,
+      api_secret: keys.lifetimeSMSSecret,
+      to: phone,
+      from: '8485',
+      event_id: '458',
+      data: JSON.stringify({ code: otp }),
+  };
+
+  try {
+      console.log("Sending SMS with payload:", payload);
+      const response = await axios.post('https://lifetimesms.com/otp', null, {
+          params: payload,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+
+      console.log('SMS API Response:', response.data);
+
+      if (response.data?.messages?.[0]?.status !== 1) {
+          throw new AppError(`SMS API error: ${response.data.messages[0]?.error || 'Unknown error'}`, 500);
+      }
+
+      return response.data;
+  } catch (error) {
+      console.error('OTP Sending Error:', error.response?.data || error.message);
+      throw new AppError(error.message || 'Error sending OTP via SMS.', 500);
+  }
+});
+
+
 
 // Save OTP to the database
 export const saveOTP = catchAsync(async (email, phone, hash) => {
@@ -145,3 +189,4 @@ export const validateOTP = async (token, otpHash) => {
     const hash = crypto.createHash('sha256').update(token).digest('hex')
     return hash === otpHash // Returns true if the OTP hash matches, false otherwise
 }
+

@@ -11,6 +11,9 @@ import {
     updateEmployeePassword,
     forgotEmployeePassword,
     resetEmployeePassword,
+    forgotPasswordViaSMS,
+    resetPasswordViaSMSOTP,
+    validateOTPHandler,
 } from '../../controllers/admin/employeeController.js'
 
 import { logout } from '../../controllers/authController.js'
@@ -25,6 +28,11 @@ router.post('/logout', protect, logout)
 router.put('/update-password', protect, updateEmployeePassword)
 router.post('/forgot-password', forgotEmployeePassword)
 router.put('/reset-password/:token', resetEmployeePassword)
+
+router.post('/forgot-password-on-sms', forgotPasswordViaSMS)
+router.put('/reset-password-on-sms', resetPasswordViaSMSOTP)
+router.post('/validate-otp', validateOTPHandler);  // For OTP validation
+
 
 router.route('/').post(protect, createEmployee).get(protect, getEmployees)
 
